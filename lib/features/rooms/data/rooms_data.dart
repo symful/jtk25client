@@ -296,37 +296,33 @@ OccupancyMatrix applyPenggantiToDate(
 
     switch (pengganti.kind) {
       case PenggantiKind.replace:
-        // Remove base occupancies for replaced times.
         final replaceTimes = pengganti.sessions.map((s) => s.time).toSet();
-        for (final time in replaceTimes) {
-          final slotIndices = _findOverlappingSlots(time);
-          for (final si in slotIndices) {
-            final occupancies = result[pengganti.classCode]?[day]?[si];
-            if (occupancies != null) {
-              occupancies.removeWhere((o) => o.sessionTime == time);
-            }
+        final baseTimes = baseSessions
+            .where((s) => replaceTimes.contains(s.time))
+            .map((s) => s.time)
+            .toSet();
+
+        for (final roomId in result.keys.toList()) {
+          final dayMap = result[roomId]?[day];
+          if (dayMap == null) continue;
+          for (final slotEntry in dayMap.entries) {
+            slotEntry.value.removeWhere(
+              (o) =>
+                  (o.classCode == pengganti.classCode) &&
+                  (baseTimes.contains(o.sessionTime) ||
+                      replaceTimes.contains(o.sessionTime)),
+            );
           }
         }
-        // Also remove occupancies where the base session time matches.
-        for (final base in baseSessions) {
-          if (replaceTimes.contains(base.time)) {
-            final slotIndices = _findOverlappingSlots(base.time);
-            for (final si in slotIndices) {
-              final occupancies = result[pengganti.classCode]?[day]?[si];
-              if (occupancies != null) {
-                occupancies.removeWhere((o) => o.sessionTime == base.time);
-              }
-            }
-          }
-        }
-        // Add pengganti sessions.
+
         for (final session in pengganti.sessions) {
+          final room = session.room;
           final slotIndices = _findOverlappingSlots(session.time);
-          result.putIfAbsent(pengganti.classCode, () => {});
-          result[pengganti.classCode]!.putIfAbsent(day, () => {});
+          result.putIfAbsent(room, () => {});
+          result[room]!.putIfAbsent(day, () => {});
           for (final si in slotIndices) {
-            result[pengganti.classCode]![day]!.putIfAbsent(si, () => []);
-            result[pengganti.classCode]![day]![si]!.add(
+            result[room]![day]!.putIfAbsent(si, () => []);
+            result[room]![day]![si]!.add(
               SessionOccupancy(
                 classCode: pengganti.classCode,
                 courseCode: session.courseCode,
@@ -340,14 +336,14 @@ OccupancyMatrix applyPenggantiToDate(
         }
 
       case PenggantiKind.add:
-        // Append pengganti sessions.
         for (final session in pengganti.sessions) {
+          final room = session.room;
           final slotIndices = _findOverlappingSlots(session.time);
-          result.putIfAbsent(pengganti.classCode, () => {});
-          result[pengganti.classCode]!.putIfAbsent(day, () => {});
+          result.putIfAbsent(room, () => {});
+          result[room]!.putIfAbsent(day, () => {});
           for (final si in slotIndices) {
-            result[pengganti.classCode]![day]!.putIfAbsent(si, () => []);
-            result[pengganti.classCode]![day]![si]!.add(
+            result[room]![day]!.putIfAbsent(si, () => []);
+            result[room]![day]![si]!.add(
               SessionOccupancy(
                 classCode: pengganti.classCode,
                 courseCode: session.courseCode,
