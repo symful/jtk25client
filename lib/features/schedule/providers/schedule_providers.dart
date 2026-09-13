@@ -31,6 +31,40 @@ final scheduleViewModeProvider =
     );
 
 // ---------------------------------------------------------------------------
+// Selected day (Hari Ini sub-control)
+// ---------------------------------------------------------------------------
+
+/// Compute today's [Day] in WIB (UTC+7).
+Day _todayWib() {
+  final now = DateTime.now();
+  final utc = now.isUtc ? now : now.toUtc();
+  final wib = utc.add(const Duration(hours: 7));
+  return Day.values[wib.weekday - 1];
+}
+
+/// Whether the selected day equals the actual today in WIB.
+bool isSelectedDayToday(Day selected) => selected == _todayWib();
+
+/// Notifier for the currently selected day within the "Hari Ini" view.
+///
+/// Defaults to today's weekday in WIB. Resets on app restart (no persistence).
+class _SelectedDayNotifier extends Notifier<Day> {
+  @override
+  Day build() => _todayWib();
+
+  /// Select a different day.
+  void selectDay(Day day) => state = day;
+
+  /// Reset selection to today.
+  void resetToToday() => state = _todayWib();
+}
+
+/// Currently selected day in the "Hari Ini" view.
+final selectedDayProvider = NotifierProvider<_SelectedDayNotifier, Day>(
+  _SelectedDayNotifier.new,
+);
+
+// ---------------------------------------------------------------------------
 // Selected class (Hive-persisted)
 // ---------------------------------------------------------------------------
 

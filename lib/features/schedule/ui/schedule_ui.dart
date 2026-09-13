@@ -110,6 +110,65 @@ class _ViewModeToggle extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Day switcher chips (inside "Hari Ini" view)
+// ---------------------------------------------------------------------------
+
+class _DayChipsRow extends StatelessWidget {
+  const _DayChipsRow({
+    required this.days,
+    required this.selectedDay,
+    required this.onDaySelected,
+    required this.onResetToday,
+  });
+
+  final List<Day> days;
+  final Day selectedDay;
+  final ValueChanged<Day> onDaySelected;
+  final VoidCallback onResetToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final showReset = !isSelectedDayToday(selectedDay);
+
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        scrollDirection: Axis.horizontal,
+        itemCount: showReset ? days.length + 1 : days.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, index) {
+          if (showReset && index == 0) {
+            return ActionChip(
+              avatar: const Icon(Icons.today, size: 18),
+              label: const Text('Hari Ini'),
+              onPressed: onResetToday,
+            );
+          }
+          final dayIndex = showReset ? index - 1 : index;
+          final day = days[dayIndex];
+          return ChoiceChip(
+            label: Text(_dayLabel(day)),
+            selected: day == selectedDay,
+            onSelected: (_) => onDaySelected(day),
+          );
+        },
+      ),
+    );
+  }
+
+  static String _dayLabel(Day day) => switch (day) {
+    Day.senin => 'Senin',
+    Day.selasa => 'Selasa',
+    Day.rabu => 'Rabu',
+    Day.kamis => 'Kamis',
+    Day.jumat => 'Jumat',
+    Day.sabtu => 'Sabtu',
+    Day.minggu => 'Minggu',
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Schedule content (switches between today / week)
 // ---------------------------------------------------------------------------
 
@@ -136,8 +195,10 @@ class _TodayView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final classCode = ref.watch(selectedClassProvider);
+    final selectedDay = ref.watch(selectedDayProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
     final penggantiAsync = ref.watch(penggantiProvider);
+    final isToday = isSelectedDayToday(selectedDay);
 
     return schedulesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -157,11 +218,55 @@ class _TodayView extends ConsumerWidget {
 
         final classSchedule = classData.first.schedule;
 
-        return penggantiAsync.when(
-          loading: () => _buildDay(context, classCode, classSchedule, []),
-          error: (e, _) => _buildDay(context, classCode, classSchedule, []),
-          data: (penggantiEntries) =>
-              _buildDay(context, classCode, classSchedule, penggantiEntries),
+        // Determine which days have sessions for this class.
+        final daysWithSessions = classSchedule
+            .where((ds) => ds.sessions.isNotEmpty)
+            .map((ds) => ds.day)
+            .toList();
+
+        return Column(
+          children: [
+            // Day switcher chips.
+            _DayChipsRow(
+              days: daysWithSessions,
+              selectedDay: selectedDay,
+              onDaySelected: (day) {
+                ref.read(selectedDayProvider.notifier).selectDay(day);
+              },
+              onResetToday: () {
+                ref.read(selectedDayProvider.notifier).resetToToday();
+              },
+            ),
+            // Schedule content.
+            Expanded(
+              child: penggantiAsync.when(
+                loading: () => _buildDay(
+                  context,
+                  classCode,
+                  classSchedule,
+                  [],
+                  selectedDay,
+                  isToday,
+                ),
+                error: (e, _) => _buildDay(
+                  context,
+                  classCode,
+                  classSchedule,
+                  [],
+                  selectedDay,
+                  isToday,
+                ),
+                data: (penggantiEntries) => _buildDay(
+                  context,
+                  classCode,
+                  classSchedule,
+                  penggantiEntries,
+                  selectedDay,
+                  isToday,
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -172,16 +277,22 @@ class _TodayView extends ConsumerWidget {
     String classCode,
     List<DaySchedule> classSchedule,
     List<PenggantiEntry> penggantiEntries,
+    Day selectedDay,
+    bool isToday,
   ) {
-    final now = DateTime.now();
+    final date = dayToDate(selectedDay);
     final dayData = resolveDaySchedule(
       classCode: classCode,
-      date: now,
+      date: date,
       classSchedule: classSchedule,
       penggantiEntries: penggantiEntries,
     );
 
-    return _DayScheduleList(dayData: dayData, date: now);
+    return _DayScheduleList(
+      dayData: dayData,
+      date: date,
+      showNowIndicator: isToday,
+    );
   }
 }
 
@@ -268,10 +379,15 @@ class _WeekView extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _DayScheduleList extends StatelessWidget {
-  const _DayScheduleList({required this.dayData, required this.date});
+  const _DayScheduleList({
+    required this.dayData,
+    required this.date,
+    this.showNowIndicator = true,
+  });
 
   final DayScheduleData dayData;
   final DateTime date;
+  final bool showNowIndicator;
 
   @override
   Widget build(BuildContext context) {
@@ -301,7 +417,7 @@ class _DayScheduleList extends StatelessWidget {
     } else {
       for (var i = 0; i < sessions.length; i++) {
         final session = sessions[i];
-        final isActive = isSessionActive(session, now);
+        final isActive = showNowIndicator && isSessionActive(session, now);
         children.add(_SessionCard(session: session, isActive: isActive));
 
         // Add istirahat gap between consecutive sessions.
