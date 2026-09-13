@@ -24,7 +24,7 @@ import '../api/jtk_api.dart';
 import '../models/schedule.dart';
 import '../utils/time_slot.dart';
 import '../../features/settings/data/settings_data.dart';
-import '_web_helper_stub.dart' if (dart.library.html) '_web_helper.dart';
+import '_web_helper_stub.dart' if (dart.library.js_interop) '_web_helper.dart';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -88,7 +88,15 @@ class NotificationService {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const initSettings = InitializationSettings(android: androidSettings);
+    const windowsSettings = WindowsInitializationSettings(
+      appName: 'JTK25 Jadwal',
+      appUserModelId: 'id.matcha.jtk25.jtk25client',
+      guid: '9a508d55-c06b-4e14-9e8f-0f638c5c4298',
+    );
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      windows: windowsSettings,
+    );
 
     await _plugin.initialize(
       settings: initSettings,
@@ -205,6 +213,7 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
+      windows: WindowsNotificationDetails(),
     );
 
     await _plugin.show(
@@ -333,6 +342,7 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
+      windows: WindowsNotificationDetails(),
     );
 
     // Android 12+ exact-alarm fallback.

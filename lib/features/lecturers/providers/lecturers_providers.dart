@@ -32,7 +32,7 @@ final filteredDosenProvider = Provider<List<Dosen>>((ref) {
 
   return dosenAsync.when(
     loading: () => [],
-    error: (_, __) => [],
+    error: (_, _) => [],
     data: (list) {
       if (query.isEmpty) return list;
       return list.where((d) {
@@ -58,7 +58,7 @@ final dosenDetailProvider = Provider.family<List<DosenSession>, String>((
 
   return schedulesAsync.when(
     loading: () => [],
-    error: (_, __) => [],
+    error: (_, _) => [],
     data: (response) => computeDosenSessions(lecturerCode, response.classes),
   );
 });
@@ -69,7 +69,7 @@ final dosenByCodeProvider = Provider.family<Dosen?, String>((ref, code) {
 
   return dosenAsync.when(
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
     data: (list) {
       for (final d in list) {
         if (d.code == code) return d;

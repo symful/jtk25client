@@ -1,40 +1,39 @@
-/// Web implementation of notification helpers using dart:html.
+/// Web implementation of notification helpers using package:web.
 ///
 /// Provides browser Notification API access for the web platform.
-// ignore_for_file: deprecated_member_use
 library;
 
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'dart:js_interop';
 
-/// Whether the browser supports the Notification API.
-bool webNotificationSupported() => html.Notification.supported;
+import 'package:web/web.dart' as web;
 
-/// Request browser notification permission. Returns true if granted.
+bool webNotificationSupported() => true;
+
 Future<bool> webRequestPermission() async {
-  if (!html.Notification.supported) return false;
-  final result = await html.Notification.requestPermission();
-  return result == 'granted';
-}
-
-/// Show a browser notification (fire-and-forget).
-void webShowNotification(String title, String body) {
-  if (!html.Notification.supported) return;
-  // Try to show notification; ignore errors (permission may have been revoked).
+  if (!webNotificationSupported()) return false;
   try {
-    html.Notification(title, body: body);
+    final result = await web.Notification.requestPermission().toDart;
+    return result.toString() == 'granted';
   } catch (_) {
-    // Swallow — permission may have changed since last check.
+    return false;
   }
 }
 
-/// Listen for page visibility changes (visibilitychange event).
-///
-/// Calls [onVisible] whenever the page becomes visible again.
+void webShowNotification(String title, String body) {
+  if (!webNotificationSupported()) return;
+  try {
+    web.Notification(title, web.NotificationOptions(body: body));
+  } catch (_) {
+    // Permission may have changed since last check.
+  }
+}
+
 void webStartVisibilityListener(void Function() onVisible) {
-  html.document.addEventListener('visibilitychange', (_) {
-    if (html.document.visibilityState == 'visible') {
+  void handler(JSAny event) {
+    if (web.document.visibilityState == 'visible') {
       onVisible();
     }
-  });
+  }
+
+  web.document.addEventListener('visibilitychange', handler.toJS);
 }

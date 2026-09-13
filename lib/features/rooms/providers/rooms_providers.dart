@@ -33,7 +33,7 @@ final filteredRoomsProvider = Provider<List<Room>>((ref) {
 
   return roomsAsync.when(
     loading: () => [],
-    error: (_, __) => [],
+    error: (_, _) => [],
     data: (list) {
       if (query.isEmpty) return list;
       return list.where((r) {
@@ -55,7 +55,7 @@ final occupancyMatrixProvider = Provider<OccupancyMatrix>((ref) {
 
   return schedulesAsync.when(
     loading: () => <String, Map<Day, Map<int, List<SessionOccupancy>>>>{},
-    error: (_, __) => <String, Map<Day, Map<int, List<SessionOccupancy>>>>{},
+    error: (_, _) => <String, Map<Day, Map<int, List<SessionOccupancy>>>>{},
     data: (response) => buildOccupancyMatrix(response.classes),
   );
 });
@@ -92,7 +92,7 @@ final availableNowSummaryProvider = Provider<String>((ref) {
 
   return roomsAsync.when(
     loading: () => 'Memuat...',
-    error: (_, __) => 'Gagal memuat',
+    error: (_, _) => 'Gagal memuat',
     data: (rooms) {
       final now = DateTime.now();
       final count = countAvailableRooms(matrix, rooms: rooms, now: now);
@@ -114,7 +114,7 @@ final roomSessionsProvider = Provider.family<List<RoomSession>, String>((
 
   return schedulesAsync.when(
     loading: () => [],
-    error: (_, __) => [],
+    error: (_, _) => [],
     data: (response) => findRoomSessions(roomId, response.classes),
   );
 });
@@ -125,7 +125,7 @@ final roomByIdProvider = Provider.family<Room?, String>((ref, id) {
 
   return roomsAsync.when(
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
     data: (list) {
       for (final r in list) {
         if (r.id == id) return r;

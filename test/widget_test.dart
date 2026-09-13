@@ -1,20 +1,30 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:jtk25_client/app.dart';
+import 'package:jtk25_client/features/settings/data/settings_data.dart';
 
 void main() {
-  testWidgets('App renders placeholder', (WidgetTester tester) async {
+  late Directory tempDir;
+
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    tempDir = await Directory.systemTemp.createTemp('jtk25_test_');
+    Hive.init(tempDir.path);
+    await Hive.openBox(kSettingsBoxName);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    tempDir.deleteSync(recursive: true);
+  });
+
+  testWidgets('App renders landing page', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: Jtk25App()));
     await tester.pumpAndSettle();
 
-    // Verify placeholder text renders
-    expect(find.text('Selamat datang di JTK25'), findsOneWidget);
+    expect(find.text('JTK25'), findsWidgets);
   });
 }
