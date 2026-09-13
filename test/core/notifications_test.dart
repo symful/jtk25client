@@ -106,8 +106,8 @@ void main() {
       expect(blocks[2], hasLength(1)); // One A
     });
 
-    test('real D3-3A Senin produces 3 blocks (Proyek3, PBO TE, KG TE)', () {
-      // D3-3A Senin: 07.00-12.20 Proyek3 PR, 13.50-15.20 PBO TE, 15.40-17.20 KG TE
+    test('real D3-2A Senin produces 3 blocks (Proyek3, PBO TE, KG TE)', () {
+      // D3-2A Senin: 07.00-12.20 Proyek3 PR, 13.50-15.20 PBO TE, 15.40-17.20 KG TE
       final sessions = [
         makeSession(time: '07.00-07.50', courseCode: '25IF2116'),
         makeSession(time: '07.50-08.40', courseCode: '25IF2116'),

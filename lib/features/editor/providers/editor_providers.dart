@@ -98,7 +98,7 @@ class SessionForm {
 /// State for editing a single class schedule.
 class ScheduleFormState {
   ScheduleFormState({
-    this.classCode = 'D3-3A',
+    this.classCode = 'D3-2A',
     Map<String, List<SessionForm>>? days,
   }) : days =
            days ??
@@ -239,7 +239,7 @@ class PenggantiSessionForm {
 class PenggantiEntryForm {
   PenggantiEntryForm({
     this.id = '',
-    this.classCode = 'D3-3A',
+    this.classCode = 'D3-2A',
     this.date = '',
     this.kind = 'replace',
     this.note = '',

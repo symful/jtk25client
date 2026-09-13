@@ -8,7 +8,7 @@ const String kSettingsBoxName = 'jtk_settings';
 class SettingsKeys {
   SettingsKeys._();
 
-  /// The currently selected class code (e.g. "D3-3A").
+  /// The currently selected class code (e.g. "D3-2A").
   static const String selectedClass = 'selected_class';
 
   /// Whether notifications are enabled.
@@ -20,12 +20,12 @@ class SettingsKeys {
 
 /// All known class codes in the app.
 const List<String> kAllClassCodes = [
-  'D3-3A',
-  'D3-3B',
-  'D4-3T-A',
-  'D4-3T-B',
-  'D4-3T-C',
-  'D4-3T-D',
+  'D3-2A',
+  'D3-2B',
+  'D4-2A',
+  'D4-2B',
+  'D4-2C',
+  'D4-2D',
 ];
 
 /// Human-readable label for a class code.

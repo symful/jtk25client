@@ -100,12 +100,12 @@ ValidationResult validateAgainst(dynamic instance, JsonSchema schema) {
 
 /// Class-code to data filename mapping.
 const Map<String, String> kClassFileNameMap = {
-  'D3-3A': 'schedules_D3_S3_A',
-  'D3-3B': 'schedules_D3_S3_B',
-  'D4-3T-A': 'schedules_D4_S3T_A',
-  'D4-3T-B': 'schedules_D4_S3T_B',
-  'D4-3T-C': 'schedules_D3_S3_C',
-  'D4-3T-D': 'schedules_D3_S3_D',
+  'D3-2A': 'schedules_D3_S3_A',
+  'D3-2B': 'schedules_D3_S3_B',
+  'D4-2A': 'schedules_D4_S3_A',
+  'D4-2B': 'schedules_D4_S3_B',
+  'D4-2C': 'schedules_D4_S3_C',
+  'D4-2D': 'schedules_D4_S3_D',
 };
 
 /// Fixed semester string for v2 envelopes.

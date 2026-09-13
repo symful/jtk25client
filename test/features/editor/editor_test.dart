@@ -21,7 +21,7 @@ void main() {
         'data': [
           {
             'id': 'test-pengganti-001',
-            'class_code': 'D3-3A',
+            'class_code': 'D3-2A',
             'date': '2026-09-15',
             'kind': 'replace',
             'sessions': [
@@ -46,7 +46,7 @@ void main() {
         'semester': kSemester,
         'updatedAt': now,
         'data': {
-          'class_name': 'D3-3A',
+          'class_name': 'D3-2A',
           'schedule': [
             {
               'day': 'SENIN',
@@ -119,7 +119,7 @@ void main() {
         'semester': kSemester,
         'updatedAt': DateTime.now().toIso8601String(),
         'data': {
-          'class_name': 'D3-3A',
+          'class_name': 'D3-2A',
           'schedule': [
             {
               'day': 'SENIN',
@@ -156,7 +156,7 @@ void main() {
         'semester': kSemester,
         'updatedAt': DateTime.now().toIso8601String(),
         'data': {
-          'class_name': 'D3-3A',
+          'class_name': 'D3-2A',
           'schedule': [
             {
               'day': 'SENIN',
@@ -187,7 +187,7 @@ void main() {
         'semester': kSemester,
         'updatedAt': DateTime.now().toIso8601String(),
         'data': {
-          'class_name': 'D3-3A',
+          'class_name': 'D3-2A',
           'schedule': [
             {
               'day': 'SENIN',
@@ -215,7 +215,7 @@ void main() {
   group('Editor envelope building', () {
     test('buildScheduleEnvelope produces valid envelope', () {
       final sc = ScheduleClass(
-        className: 'D3-3A',
+        className: 'D3-2A',
         schedule: [
           DaySchedule(
             day: Day.senin,
@@ -254,7 +254,7 @@ void main() {
       final entries = [
         PenggantiEntry(
           id: 'test-001',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-15',
           kind: PenggantiKind.replace,
           sessions: [
@@ -289,12 +289,12 @@ void main() {
   group('Editor filename generation', () {
     test('exportFilename returns correct names', () {
       expect(
-        exportFilename(EditorDataType.schedule, classCode: 'D3-3A'),
+        exportFilename(EditorDataType.schedule, classCode: 'D3-2A'),
         'schedules_D3_S3_A.json',
       );
       expect(
-        exportFilename(EditorDataType.schedule, classCode: 'D4-3T-B'),
-        'schedules_D4_S3T_B.json',
+        exportFilename(EditorDataType.schedule, classCode: 'D4-2B'),
+        'schedules_D4_S3_B.json',
       );
       expect(exportFilename(EditorDataType.pengganti), 'pengganti.json');
       expect(

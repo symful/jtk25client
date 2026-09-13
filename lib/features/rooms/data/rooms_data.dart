@@ -53,7 +53,7 @@ class SessionOccupancy {
     required this.sessionTime,
   });
 
-  /// The class that has this session (e.g. "D3-3A").
+  /// The class that has this session (e.g. "D3-2A").
   final String classCode;
 
   /// Course code (e.g. "25IF2116").

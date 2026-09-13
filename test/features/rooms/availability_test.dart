@@ -41,7 +41,7 @@ void main() {
     test('single session occupies correct slots', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -73,7 +73,7 @@ void main() {
     test('long span occupies multiple slots', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -120,7 +120,7 @@ void main() {
     test('multiple classes in same room same day creates overlap', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -131,7 +131,7 @@ void main() {
           ],
         ),
         _makeClass(
-          className: 'D3-3B',
+          className: 'D3-2B',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -180,7 +180,7 @@ void main() {
     test('returns false for single occupancy', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -275,7 +275,7 @@ void main() {
     test('returns false when room is occupied', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -295,7 +295,7 @@ void main() {
     test('returns true when room is free', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -317,7 +317,7 @@ void main() {
     test('replace removes base occupancy and adds pengganti', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -336,7 +336,7 @@ void main() {
       final pengganti = [
         PenggantiEntry(
           id: 'pg-1',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-14',
           kind: PenggantiKind.replace,
           sessions: [
@@ -373,7 +373,7 @@ void main() {
     test('add appends new session without removing base', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -390,7 +390,7 @@ void main() {
       final pengganti = [
         PenggantiEntry(
           id: 'pg-2',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-14',
           kind: PenggantiKind.add,
           sessions: [
@@ -427,7 +427,7 @@ void main() {
     test('info does not affect matrix', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -444,7 +444,7 @@ void main() {
       final pengganti = [
         PenggantiEntry(
           id: 'pg-3',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-14',
           kind: PenggantiKind.info,
           note: 'Libur nasional',
@@ -468,7 +468,7 @@ void main() {
     test('weekend date returns base matrix unchanged', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -485,7 +485,7 @@ void main() {
       final pengganti = [
         PenggantiEntry(
           id: 'pg-4',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-19', // Saturday
           kind: PenggantiKind.replace,
           sessions: [
@@ -525,7 +525,7 @@ void main() {
     test('finds sessions in a room across classes', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -536,7 +536,7 @@ void main() {
           ],
         ),
         _makeClass(
-          className: 'D3-3B',
+          className: 'D3-2B',
           day: Day.selasa,
           sessions: [
             _makeSession(
@@ -550,14 +550,14 @@ void main() {
 
       final sessions = findRoomSessions('D108-Kelas', classes);
       expect(sessions, hasLength(2));
-      expect(sessions[0].classCode, 'D3-3A');
-      expect(sessions[1].classCode, 'D3-3B');
+      expect(sessions[0].classCode, 'D3-2A');
+      expect(sessions[1].classCode, 'D3-2B');
     });
 
     test('returns empty for non-existent room', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -576,7 +576,7 @@ void main() {
     test('sorts by day then time', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.jumat,
           sessions: [
             _makeSession(
@@ -587,7 +587,7 @@ void main() {
           ],
         ),
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(
@@ -610,7 +610,7 @@ void main() {
     test('counts available rooms', () {
       final classes = [
         _makeClass(
-          className: 'D3-3A',
+          className: 'D3-2A',
           day: Day.senin,
           sessions: [
             _makeSession(

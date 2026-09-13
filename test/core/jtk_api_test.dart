@@ -111,7 +111,7 @@ void main() {
         'semester': '2026/2027-GANJIL',
         'classes': [
           {
-            'class_name': 'D3-3A',
+            'class_name': 'D3-2A',
             'schedule': [
               {
                 'day': 'SENIN',
@@ -133,7 +133,7 @@ void main() {
       });
       expect(response.semester, '2026/2027-GANJIL');
       expect(response.classes.length, 1);
-      expect(response.classes[0].className, 'D3-3A');
+      expect(response.classes[0].className, 'D3-2A');
       expect(response.classes[0].schedule.length, 1);
       expect(response.classes[0].schedule[0].day, Day.senin);
       expect(response.classes[0].schedule[0].sessions.length, 1);

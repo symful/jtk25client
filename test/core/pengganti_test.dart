@@ -46,7 +46,7 @@ void main() {
       final entries = [
         PenggantiEntry(
           id: 'pg-001',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-15',
           kind: PenggantiKind.replace,
           sessions: [
@@ -78,7 +78,7 @@ void main() {
       final entries = [
         PenggantiEntry(
           id: 'pg-002',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-15',
           kind: PenggantiKind.add,
           sessions: [
@@ -108,7 +108,7 @@ void main() {
       final entries = [
         PenggantiEntry(
           id: 'pg-003',
-          classCode: 'D3-3A',
+          classCode: 'D3-2A',
           date: '2026-09-15',
           kind: PenggantiKind.info,
           note: 'Libur nasional',
@@ -129,7 +129,7 @@ void main() {
         final entries = [
           PenggantiEntry(
             id: 'pg-b',
-            classCode: 'D3-3A',
+            classCode: 'D3-2A',
             date: '2026-09-15',
             kind: PenggantiKind.replace,
             sessions: [
@@ -146,7 +146,7 @@ void main() {
           ),
           PenggantiEntry(
             id: 'pg-a',
-            classCode: 'D3-3A',
+            classCode: 'D3-2A',
             date: '2026-09-15',
             kind: PenggantiKind.replace,
             sessions: [
@@ -181,12 +181,12 @@ void main() {
     test('parses minimal entry', () {
       final entry = PenggantiEntry.fromJson({
         'id': 'pg-001',
-        'class_code': 'D3-3A',
+        'class_code': 'D3-2A',
         'date': '2026-09-15',
         'kind': 'info',
       });
       expect(entry.id, 'pg-001');
-      expect(entry.classCode, 'D3-3A');
+      expect(entry.classCode, 'D3-2A');
       expect(entry.kind, PenggantiKind.info);
       expect(entry.sessions, isEmpty);
     });
@@ -194,7 +194,7 @@ void main() {
     test('parses replace entry with sessions', () {
       final entry = PenggantiEntry.fromJson({
         'id': 'pg-002',
-        'class_code': 'D3-3A',
+        'class_code': 'D3-2A',
         'date': '2026-09-15',
         'kind': 'replace',
         'sessions': [

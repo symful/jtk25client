@@ -14,7 +14,7 @@ class DosenSession {
     required this.session,
   });
 
-  /// The class code this session belongs to (e.g. "D3-3A").
+  /// The class code this session belongs to (e.g. "D3-2A").
   final String classCode;
 
   /// Day of the week.
