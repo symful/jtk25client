@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import 'features/announcements/announcements.dart';
 import 'features/events/events.dart';
+import 'features/pengganti/pengganti.dart';
+import 'features/schedule/schedule.dart';
 
 /// Root widget for the JTK25 client application.
 class Jtk25App extends StatelessWidget {
@@ -23,30 +25,15 @@ class Jtk25App extends StatelessWidget {
   }
 }
 
-/// Placeholder router — will be expanded in T8 (core router).
+/// Core router — schedule + pengganti + announcements + events.
 final _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/jadwal',
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const _PlaceholderPage(
-        title: 'Beranda',
-        subtitle: 'Selamat datang di JTK25',
-      ),
-    ),
-    GoRoute(
-      path: '/jadwal',
-      builder: (context, state) => const _PlaceholderPage(
-        title: 'Jadwal',
-        subtitle: 'Jadwal perkuliahan',
-      ),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const SchedulePage()),
+    GoRoute(path: '/jadwal', builder: (context, state) => const SchedulePage()),
     GoRoute(
       path: '/pengganti',
-      builder: (context, state) => const _PlaceholderPage(
-        title: 'Pengganti',
-        subtitle: 'Jadwal pengganti',
-      ),
+      builder: (context, state) => const PenggantiPage(),
     ),
     GoRoute(
       path: '/pengumuman',
@@ -58,24 +45,3 @@ final _router = GoRouter(
     ),
   ],
 );
-
-/// Simple placeholder page for routing verification.
-class _PlaceholderPage extends StatelessWidget {
-  const _PlaceholderPage({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(
-          subtitle,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-      ),
-    );
-  }
-}
