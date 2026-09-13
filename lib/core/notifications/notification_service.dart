@@ -2,8 +2,6 @@
 ///
 /// - **Android**: WorkManager 15-min periodic poll, flutter_local_notifications,
 ///   zonedSchedule for class reminders with exact-alarm fallback.
-/// - **Windows**: Timer 15-min poll while process alive, flutter_local_notifications,
-///   zonedSchedule for class reminders.
 /// - **Web**: dart:html Notification API with Snackbar fallback; Timer + visibility poll.
 ///
 /// Dedup: same dataVersion → no repeat; same course-block → one alarm.
@@ -77,7 +75,7 @@ class NotificationService {
 
   /// Initialize the notification service for the current platform.
   ///
-  /// On Android/Windows, creates the notification channel and initializes
+  /// On Android, creates the notification channel and initializes
   /// flutter_local_notifications. On web, no initialization is needed.
   Future<void> init() async {
     if (_initialized) return;
@@ -88,15 +86,7 @@ class NotificationService {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const windowsSettings = WindowsInitializationSettings(
-      appName: 'JTK25 Jadwal',
-      appUserModelId: 'id.matcha.jtk25.jtk25client',
-      guid: '9a508d55-c06b-4e14-9e8f-0f638c5c4298',
-    );
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      windows: windowsSettings,
-    );
+    const initSettings = InitializationSettings(android: androidSettings);
 
     await _plugin.initialize(
       settings: initSettings,
@@ -136,8 +126,8 @@ class NotificationService {
   /// Start periodic polling every 15 minutes.
   ///
   /// On Android, WorkManager also handles background polling; this in-app
-  /// timer covers the foreground case. On Windows, this is the only poller.
-  /// On web, visibility-change events are also registered.
+  /// timer covers the foreground case. On web, visibility-change events
+  /// are also registered.
   void startPolling() {
     _pollTimer?.cancel();
     // Poll immediately on start.
@@ -204,7 +194,7 @@ class NotificationService {
       return;
     }
 
-    // Android / Windows: flutter_local_notifications.
+    // Android: flutter_local_notifications.
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
         kNotificationChannelId,
@@ -213,7 +203,6 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
-      windows: WindowsNotificationDetails(),
     );
 
     await _plugin.show(
@@ -342,7 +331,6 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
-      windows: WindowsNotificationDetails(),
     );
 
     // Android 12+ exact-alarm fallback.

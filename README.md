@@ -5,7 +5,6 @@ Aplikasi jadwal perkuliahan JTK (Jaringan Telekomunikasi dan Komputer) untuk mah
 ## Platform
 
 - Android (minSdk 23)
-- Windows
 - Web
 
 ## Instalasi
@@ -27,9 +26,6 @@ flutter run -d chrome
 
 # Run di Android
 flutter run -d <device-id>
-
-# Run di Windows
-flutter run -d windows
 ```
 
 ### Build
