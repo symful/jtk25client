@@ -16,7 +16,8 @@ import '../models/schedule.dart';
 import 'etag_interceptor.dart';
 
 /// Production API base URL (fallback when no --dart-define is provided).
-const String _defaultApiBase = 'https://jtk25server.workers.dev';
+/// Uses the custom domain jtk25.my.id.
+const String _defaultApiBase = 'https://jtk25.my.id';
 
 /// The API base URL, resolved from dart-define or fallback.
 const String apiBase = String.fromEnvironment(
