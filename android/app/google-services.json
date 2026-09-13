@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "273058937677",
+    "firebase_url": "https://numeric-lead-265602.firebaseio.com",
+    "project_id": "numeric-lead-265602",
+    "storage_bucket": "numeric-lead-265602.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273058937677:android:1db521057e4c7369ae5504",
+        "android_client_info": {
+          "package_name": "id.kmipn.sigap.sigap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsJ_hpqNs069WddnD_QFWoAfhWZf6RD0E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273058937677:android:3f1989af79995c02ae5504",
+        "android_client_info": {
+          "package_name": "id.matcha.jtk25.jtk25_client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsJ_hpqNs069WddnD_QFWoAfhWZf6RD0E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,65 @@
+// Firebase Cloud Messaging service worker for JTK25.
+// This file handles background messages when the web app is in the background
+// or the browser tab is closed.
+
+// Give Firebase messaging time to import the scripts
+// eslint-disable-next-line no-undef
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+// eslint-disable-next-line no-undef
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+
+// Initialize Firebase with the same config as the main app
+firebase.initializeApp({
+  apiKey: 'AIzaSyBgaTtr17l2rtcG3E0gGj9SzWRSEAAAm08',
+  authDomain: 'numeric-lead-265602.firebaseapp.com',
+  projectId: 'numeric-lead-265602',
+  storageBucket: 'numeric-lead-265602.firebasestorage.app',
+  messagingSenderId: '273058937677',
+  appId: '1:273058937677:web:c2d04a841cf1ba34ae5504',
+  measurementId: 'G-EEMY0MY8VV',
+});
+
+// Retrieve an instance of Firebase Messaging so that it can listen for
+// background messages.
+// eslint-disable-next-line no-unused-vars
+const messaging = firebase.messaging();
+
+// Handle background messages
+messaging.onBackgroundMessage(function (payload) {
+  console.log('[firebase-messaging-sw.js] Received background message:', payload);
+
+  // Customize notification here
+  const notificationTitle = payload.notification?.title || 'JTK25';
+  const notificationOptions = {
+    body: payload.notification?.body || 'Pembaruan tersedia',
+    icon: '/favicon.png',
+    badge: '/favicon.png',
+    data: payload.data || {},
+  };
+
+  // self.registration.showNotification is available in service worker context
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', function (event) {
+  console.log('[firebase-messaging-sw.js] Notification click:', event);
+  event.notification.close();
+
+  // Open the app when notification is clicked
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+      // If the app is already open, focus it
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
+    }),
+  );
+});

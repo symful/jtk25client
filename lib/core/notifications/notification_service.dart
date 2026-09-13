@@ -63,6 +63,11 @@ class NotificationService {
   Timer? _pollTimer;
   bool _initialized = false;
 
+  /// The underlying flutter_local_notifications plugin instance.
+  ///
+  /// Exposed for FCM service to display foreground messages.
+  FlutterLocalNotificationsPlugin get plugin => _plugin;
+
   /// Scaffold messenger key for web Snackbar fallback.
   ///
   /// Set this from the app's root widget to enable in-app notifications

@@ -7,6 +7,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
 
+import '../notifications/fcm_service.dart';
 import '../notifications/notification_service.dart';
 import '../../features/settings/data/settings_data.dart';
 
@@ -78,4 +79,18 @@ final notificationStatusProvider = FutureProvider<String>((ref) async {
 /// Provider exposing the [NotificationService] singleton.
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService.instance;
+});
+
+// ---------------------------------------------------------------------------
+// FCM push status
+// ---------------------------------------------------------------------------
+
+/// Human-readable FCM push status in Bahasa Indonesia.
+final fcmStatusProvider = FutureProvider<String>((ref) async {
+  return FcmService.instance.pushStatusText();
+});
+
+/// Provider exposing the [FcmService] singleton.
+final fcmServiceProvider = Provider<FcmService>((ref) {
+  return FcmService.instance;
 });

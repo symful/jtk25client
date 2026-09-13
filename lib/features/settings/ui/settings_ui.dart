@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/notifications/notification_providers.dart';
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/notifications/fcm_service.dart';
 import '../../schedule/providers/schedule_providers.dart';
 import '../data/settings_data.dart';
 
@@ -27,6 +28,9 @@ class SettingsPage extends ConsumerWidget {
           const Divider(),
           // Notification section.
           const _NotificationSection(),
+          const Divider(),
+          // FCM push status section.
+          const _FcmPushSection(),
         ],
       ),
     );
@@ -147,6 +151,69 @@ class _NotificationSection extends ConsumerWidget {
               return const SizedBox.shrink();
             },
           ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// FCM push status section
+// ---------------------------------------------------------------------------
+
+class _FcmPushSection extends ConsumerWidget {
+  const _FcmPushSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fcmStatusAsync = ref.watch(fcmStatusProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            'Push Notifikasi',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.cloud_queue),
+          title: const Text('Status Push'),
+          subtitle: fcmStatusAsync.when(
+            loading: () => const Text('Memuat...'),
+            error: (e, _) => const Text('Gagal memuat status'),
+            data: (status) => Text(status),
+          ),
+        ),
+        if (!FcmService.instance.isSupported)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Untuk mengaktifkan push web, buat sertifikat Web Push di Firebase Console \u2192 Project Settings \u2192 Cloud Messaging.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final selectedClass = ref.read(selectedClassProvider);
+              if (selectedClass.isNotEmpty) {
+                await FcmService.instance.subscribeToClassTopic(selectedClass);
+                ref.invalidate(fcmStatusProvider);
+              }
+            },
+            icon: const Icon(Icons.topic),
+            label: const Text('Perbarui Langganan Topik'),
+          ),
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
