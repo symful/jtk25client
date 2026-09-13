@@ -1,0 +1,28 @@
+# Entrypoints — always revalidate (detect new deploys)
+/index.html
+  Cache-Control: no-cache
+
+/flutter_bootstrap.js
+  Cache-Control: no-cache
+
+/flutter.js
+  Cache-Control: no-cache
+
+/flutter_service_worker.js
+  Cache-Control: no-cache
+
+/manifest.json
+  Cache-Control: no-cache
+
+# Static assets — browser revalidates (cheap 304), CDN caches aggressively
+/*.{js,mjs,wasm}
+  Cache-Control: public, max-age=0, s-maxage=604800
+
+/canvaskit/*
+  Cache-Control: public, max-age=0, s-maxage=604800
+
+/assets/*
+  Cache-Control: public, max-age=0, s-maxage=604800
+
+/icons/*
+  Cache-Control: public, max-age=0, s-maxage=604800
