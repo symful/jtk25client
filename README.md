@@ -80,6 +80,22 @@ GitHub Actions workflow sudah terkonfigurasi di `.github/workflows/`:
 
 > **Catatan:** Client CI tidak memerlukan secrets tambahan. Semua dependencies di-install dari pub.dev secara publik.
 
+## Konfigurasi Firebase
+
+File konfigurasi Firebase **tidak di-commit** ke repo (berisi API key). Sebelum build, kamu perlu membuat file-file berikut:
+
+| File | Lokasi | Cara mendapatkannya |
+|------|--------|---------------------|
+| `google-services.json` | `android/app/` | Firebase Console → Project Settings → Android app → `google-services.json` |
+| `firebase_options.dart` | `lib/` | Jalankan `flutterfire configure --project=numeric-lead-265602` |
+| `firebase-messaging-sw.js` | `web/` | Salin dari `.example` lalu isi dengan nilai Firebase dari Console |
+
+**Project Firebase:** `numeric-lead-265602`
+
+File `.example` di repo menunjukkan struktur yang diharapkan. Nilai placeholder (`YOUR_API_KEY`, `YOUR_PROJECT_ID`, dll.) harus diganti dengan nilai asli dari Firebase Console atau minta dari maintainer.
+
+> ⚠️ Jangan pernah commit file konfigurasi Firebase yang sudah diisi — file ini sudah di-gitignore.
+
 ## Keamanan Keystore
 
 **PENTING:** Keystore Android (`upload-keystore.jks`) harus konsisten di semua environment build.

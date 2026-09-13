@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart'
 
 /// Default [FirebaseOptions] for use with Firebase apps.
 ///
-/// To regenerate this file, run `flutterfire configure --project=numeric-lead-265602`.
+/// To regenerate this file, run `flutterfire configure --project=YOUR_PROJECT_ID`.
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) return web;
@@ -26,22 +26,22 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBsJ_hpqNs069WddnD_QFWoAfhWZf6RD0E',
-    appId: '1:273058937677:android:3f1989af79995c02ae5504',
-    messagingSenderId: '273058937677',
-    projectId: 'numeric-lead-265602',
-    databaseURL: 'https://numeric-lead-265602.firebaseio.com',
-    storageBucket: 'numeric-lead-265602.firebasestorage.app',
+    apiKey: 'YOUR_ANDROID_API_KEY',
+    appId: '1:YOUR_PROJECT_NUMBER:android:YOUR_APP_HASH',
+    messagingSenderId: 'YOUR_PROJECT_NUMBER',
+    projectId: 'YOUR_PROJECT_ID',
+    databaseURL: 'https://YOUR_PROJECT_ID.firebaseio.com',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBgaTtr17l2rtcG3E0gGj9SzWRSEAAAm08',
-    appId: '1:273058937677:web:c2d04a841cf1ba34ae5504',
-    messagingSenderId: '273058937677',
-    projectId: 'numeric-lead-265602',
-    databaseURL: 'https://numeric-lead-265602.firebaseio.com',
-    storageBucket: 'numeric-lead-265602.firebasestorage.app',
-    authDomain: 'numeric-lead-265602.firebaseapp.com',
-    measurementId: 'G-EEMY0MY8VV',
+    apiKey: 'YOUR_WEB_API_KEY',
+    appId: '1:YOUR_PROJECT_NUMBER:web:YOUR_WEB_APP_HASH',
+    messagingSenderId: 'YOUR_PROJECT_NUMBER',
+    projectId: 'YOUR_PROJECT_ID',
+    databaseURL: 'https://YOUR_PROJECT_ID.firebaseio.com',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+    measurementId: 'YOUR_MEASUREMENT_ID',
   );
 }

@@ -10,13 +10,13 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-com
 
 // Initialize Firebase with the same config as the main app
 firebase.initializeApp({
-  apiKey: 'AIzaSyBgaTtr17l2rtcG3E0gGj9SzWRSEAAAm08',
-  authDomain: 'numeric-lead-265602.firebaseapp.com',
-  projectId: 'numeric-lead-265602',
-  storageBucket: 'numeric-lead-265602.firebasestorage.app',
-  messagingSenderId: '273058937677',
-  appId: '1:273058937677:web:c2d04a841cf1ba34ae5504',
-  measurementId: 'G-EEMY0MY8VV',
+  apiKey: 'YOUR_WEB_API_KEY',
+  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+  projectId: 'YOUR_PROJECT_ID',
+  storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+  messagingSenderId: 'YOUR_PROJECT_NUMBER',
+  appId: '1:YOUR_PROJECT_NUMBER:web:YOUR_WEB_APP_HASH',
+  measurementId: 'YOUR_MEASUREMENT_ID',
 });
 
 // Retrieve an instance of Firebase Messaging so that it can listen for

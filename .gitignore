@@ -52,6 +52,11 @@ app.*.map.json
 *.keystore
 key.properties
 
+# Firebase config (real files contain API keys — obtain from maintainer)
+android/app/google-services.json
+lib/firebase_options.dart
+web/firebase-messaging-sw.js
+
 # Environment
 .env
 .env.*
