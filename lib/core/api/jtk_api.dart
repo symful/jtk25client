@@ -70,42 +70,58 @@ class JtkApi {
 
   /// Fetch pengganti (schedule overrides).
   Future<List<PenggantiEntry>> pengganti() async {
-    final resp = await _dio.get<List<dynamic>>('/api/v1/pengganti');
-    return (resp.data ?? [])
-        .map((e) => PenggantiEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final resp = await _dio.get<Map<String, dynamic>>('/api/v1/pengganti');
+    return _unwrapList(resp.data).map((e) {
+      return PenggantiEntry.fromJson(e);
+    }).toList();
   }
 
   /// Fetch announcements.
   Future<List<Announcement>> announcements() async {
-    final resp = await _dio.get<List<dynamic>>('/api/v1/announcements');
-    return (resp.data ?? [])
-        .map((e) => Announcement.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final resp = await _dio.get<Map<String, dynamic>>('/api/v1/announcements');
+    return _unwrapList(resp.data).map((e) {
+      return Announcement.fromJson(e);
+    }).toList();
   }
 
   /// Fetch events.
   Future<List<JtkEvent>> events() async {
-    final resp = await _dio.get<List<dynamic>>('/api/v1/events');
-    return (resp.data ?? [])
-        .map((e) => JtkEvent.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final resp = await _dio.get<Map<String, dynamic>>('/api/v1/events');
+    return _unwrapList(resp.data).map((e) {
+      return JtkEvent.fromJson(e);
+    }).toList();
   }
 
   /// Fetch lecturers.
   Future<List<Dosen>> dosen() async {
-    final resp = await _dio.get<List<dynamic>>('/api/v1/dosen');
-    return (resp.data ?? [])
-        .map((e) => Dosen.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final resp = await _dio.get<Map<String, dynamic>>('/api/v1/dosen');
+    return _unwrapList(resp.data).map((e) {
+      return Dosen.fromJson(e);
+    }).toList();
   }
 
   /// Fetch rooms.
   Future<List<Room>> rooms() async {
-    final resp = await _dio.get<List<dynamic>>('/api/v1/rooms');
-    return (resp.data ?? [])
-        .map((e) => Room.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final resp = await _dio.get<Map<String, dynamic>>('/api/v1/rooms');
+    return _unwrapList(resp.data).map((e) {
+      return Room.fromJson(e);
+    }).toList();
+  }
+
+  /// Unwrap a list from the server's data envelope.
+  ///
+  /// The API returns `{"data": {"schema": 2, "data": [...]}}` for collection
+  /// endpoints. This extracts the inner `data` list, tolerating a flat list
+  /// response for forward-compatibility.
+  static List<Map<String, dynamic>> _unwrapList(dynamic responseData) {
+    if (responseData is List) {
+      return responseData.cast<Map<String, dynamic>>();
+    }
+    if (responseData is Map<String, dynamic>) {
+      final inner = responseData['data'];
+      if (inner is List) return inner.cast<Map<String, dynamic>>();
+    }
+    return const [];
   }
 
   /// Close the underlying Dio client.

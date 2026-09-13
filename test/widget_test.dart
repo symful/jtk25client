@@ -21,10 +21,10 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  testWidgets('App renders landing page', (WidgetTester tester) async {
+  testWidgets('App renders Jadwal tab', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: Jtk25App()));
     await tester.pumpAndSettle();
 
-    expect(find.text('JTK25'), findsWidgets);
+    expect(find.text('Jadwal'), findsWidgets);
   });
 }

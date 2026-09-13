@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/models/announcement.dart';
+import '../../../core/providers/providers.dart';
 import '../providers/announcements_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -20,36 +21,48 @@ class AnnouncementsListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncItems = ref.watch(filteredAnnouncementsProvider);
+    final fromCache = ref.watch(announcementsFromCacheProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pengumuman')),
       body: asyncItems.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _OfflineBanner(
-          child: Center(
-            child: Text(
-              'Gagal memuat pengumuman',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+        error: (e, _) => Center(
+          child: Text(
+            'Gagal memuat pengumuman',
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
         data: (items) {
           if (items.isEmpty) {
             return const Center(child: Text('Belum ada pengumuman'));
           }
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(filteredAnnouncementsProvider);
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: items.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 4),
-              itemBuilder: (context, i) {
-                final a = items[i];
-                return _AnnouncementTile(announcement: a);
-              },
-            ),
+          return Column(
+            children: [
+              if (fromCache)
+                const MaterialBanner(
+                  content: Text('Menampilkan data tersimpan'),
+                  leading: Icon(Icons.info_outline),
+                  actions: [],
+                ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(filteredAnnouncementsProvider);
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: items.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 4),
+                    itemBuilder: (context, i) {
+                      final a = items[i];
+                      return _AnnouncementTile(announcement: a);
+                    },
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -152,36 +165,6 @@ class AnnouncementDetailPage extends StatelessWidget {
           MarkdownBody(data: announcement.body),
         ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Offline banner wrapper
-// ---------------------------------------------------------------------------
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        MaterialBanner(
-          content: const Text('Mode offline — menampilkan data tersimpan'),
-          leading: const Icon(Icons.wifi_off),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-              child: const Text('Tutup'),
-            ),
-          ],
-        ),
-        Expanded(child: child),
-      ],
     );
   }
 }

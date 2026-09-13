@@ -52,6 +52,18 @@ final schemaVersionProvider = NotifierProvider<_SchemaVersionNotifier, int>(
   _SchemaVersionNotifier.new,
 );
 
+/// Simple boolean flag notifier (replaces removed StateProvider in Riverpod 3.x).
+class _BoolFlagNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  /// Reset the flag to false.
+  void reset() => state = false;
+
+  /// Set the flag to true.
+  void markLoaded() => state = true;
+}
+
 /// Meta response provider — fetches schema + dataVersion.
 final fetchMetaProvider = FutureProvider<MetaResponse>((ref) async {
   final api = ref.watch(apiClientProvider);
@@ -109,7 +121,7 @@ final penggantiProvider = FutureProvider<List<PenggantiEntry>>((ref) async {
       'data': entries.map((e) => e.toJson()).toList(),
     });
     return entries;
-  } on DioException catch (_) {
+  } on Exception catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.pengganti);
     if (cached is Map<String, dynamic>) {
@@ -122,8 +134,14 @@ final penggantiProvider = FutureProvider<List<PenggantiEntry>>((ref) async {
   }
 });
 
+/// Whether announcements are loaded from Hive cache (for soft banner).
+final announcementsFromCacheProvider =
+    NotifierProvider<_BoolFlagNotifier, bool>(_BoolFlagNotifier.new);
+
 /// Announcements provider.
 final announcementsProvider = FutureProvider<List<Announcement>>((ref) async {
+  // Reset cache flag on each fetch.
+  ref.read(announcementsFromCacheProvider.notifier).reset();
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.announcements();
@@ -132,10 +150,11 @@ final announcementsProvider = FutureProvider<List<Announcement>>((ref) async {
       'data': items.map((a) => a.toJson()).toList(),
     });
     return items;
-  } on DioException catch (_) {
+  } on Exception catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.announcements);
     if (cached is Map<String, dynamic>) {
+      ref.read(announcementsFromCacheProvider.notifier).markLoaded();
       final data = cached['data'] as List<dynamic>? ?? [];
       return data
           .map((e) => Announcement.fromJson(e as Map<String, dynamic>))
@@ -145,8 +164,15 @@ final announcementsProvider = FutureProvider<List<Announcement>>((ref) async {
   }
 });
 
+/// Whether events are loaded from Hive cache (for soft banner).
+final eventsFromCacheProvider = NotifierProvider<_BoolFlagNotifier, bool>(
+  _BoolFlagNotifier.new,
+);
+
 /// Events provider.
 final eventsProvider = FutureProvider<List<JtkEvent>>((ref) async {
+  // Reset cache flag on each fetch.
+  ref.read(eventsFromCacheProvider.notifier).reset();
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.events();
@@ -155,10 +181,11 @@ final eventsProvider = FutureProvider<List<JtkEvent>>((ref) async {
       'data': items.map((e) => e.toJson()).toList(),
     });
     return items;
-  } on DioException catch (_) {
+  } on Exception catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.events);
     if (cached is Map<String, dynamic>) {
+      ref.read(eventsFromCacheProvider.notifier).markLoaded();
       final data = cached['data'] as List<dynamic>? ?? [];
       return data
           .map((e) => JtkEvent.fromJson(e as Map<String, dynamic>))
@@ -178,7 +205,7 @@ final dosenProvider = FutureProvider<List<Dosen>>((ref) async {
       'data': items.map((d) => d.toJson()).toList(),
     });
     return items;
-  } on DioException catch (_) {
+  } on Exception catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.dosen);
     if (cached is Map<String, dynamic>) {
@@ -201,7 +228,7 @@ final roomsProvider = FutureProvider<List<Room>>((ref) async {
       'data': items.map((r) => r.toJson()).toList(),
     });
     return items;
-  } on DioException catch (_) {
+  } on Exception catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.rooms);
     if (cached is Map<String, dynamic>) {

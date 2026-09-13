@@ -49,9 +49,9 @@ class AppShell extends ConsumerWidget {
               ),
               destinations: [
                 const NavigationRailDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
-                  label: Text('Beranda'),
+                  icon: Icon(Icons.schedule_outlined),
+                  selectedIcon: Icon(Icons.schedule),
+                  label: Text('Jadwal'),
                 ),
                 NavigationRailDestination(
                   icon: pengumumanIcon(),
@@ -84,9 +84,9 @@ class AppShell extends ConsumerWidget {
         onDestinationSelected: _onDestinationSelected,
         destinations: [
           const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Beranda',
+            icon: Icon(Icons.schedule_outlined),
+            selectedIcon: Icon(Icons.schedule),
+            label: 'Jadwal',
           ),
           NavigationDestination(
             icon: pengumumanIcon(),

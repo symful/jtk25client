@@ -41,8 +41,8 @@ class NotFoundPage extends StatelessWidget {
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () => context.go('/'),
-                icon: const Icon(Icons.home),
-                label: const Text('Kembali ke Beranda'),
+                icon: const Icon(Icons.schedule),
+                label: const Text('Kembali ke Jadwal'),
               ),
             ],
           ),

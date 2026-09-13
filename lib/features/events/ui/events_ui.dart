@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/event.dart';
+import '../../../core/providers/providers.dart';
 import '../data/events_data.dart';
 import '../providers/events_providers.dart';
 
@@ -21,52 +22,63 @@ class EventsListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncGroups = ref.watch(groupedEventsProvider);
+    final fromCache = ref.watch(eventsFromCacheProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Acara')),
       body: asyncGroups.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _OfflineBanner(
-          child: Center(
-            child: Text(
-              'Gagal memuat acara',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+        error: (e, _) => Center(
+          child: Text(
+            'Gagal memuat acara',
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
         data: (groups) {
           if (groups.isEmpty) {
             return const Center(child: Text('Belum ada acara'));
           }
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(groupedEventsProvider);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: groups.fold<int>(
-                0,
-                (sum, g) => sum + g.items.length + 1,
+          return Column(
+            children: [
+              if (fromCache)
+                const MaterialBanner(
+                  content: Text('Menampilkan data tersimpan'),
+                  leading: Icon(Icons.info_outline),
+                  actions: [],
+                ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(groupedEventsProvider);
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: groups.fold<int>(
+                      0,
+                      (sum, g) => sum + g.items.length + 1,
+                    ),
+                    itemBuilder: (context, i) {
+                      int cursor = 0;
+                      for (final group in groups) {
+                        // Section header
+                        if (i == cursor) {
+                          return _SectionHeader(label: group.label);
+                        }
+                        cursor++;
+                        // Items
+                        for (int j = 0; j < group.items.length; j++) {
+                          if (i == cursor) {
+                            return _EventCard(event: group.items[j]);
+                          }
+                          cursor++;
+                        }
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
               ),
-              itemBuilder: (context, i) {
-                int cursor = 0;
-                for (final group in groups) {
-                  // Section header
-                  if (i == cursor) {
-                    return _SectionHeader(label: group.label);
-                  }
-                  cursor++;
-                  // Items
-                  for (int j = 0; j < group.items.length; j++) {
-                    if (i == cursor) {
-                      return _EventCard(event: group.items[j]);
-                    }
-                    cursor++;
-                  }
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+            ],
           );
         },
       ),
@@ -236,36 +248,6 @@ class _LocationChip extends StatelessWidget {
         );
       }
     }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Offline banner wrapper
-// ---------------------------------------------------------------------------
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        MaterialBanner(
-          content: const Text('Mode offline — menampilkan data tersimpan'),
-          leading: const Icon(Icons.wifi_off),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-              child: const Text('Tutup'),
-            ),
-          ],
-        ),
-        Expanded(child: child),
-      ],
-    );
   }
 }
 

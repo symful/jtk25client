@@ -1,7 +1,7 @@
 /// Core router — full route table for JTK25 client.
 ///
 /// Uses StatefulShellRoute.indexedStack for tab navigation with
-/// state preservation across Beranda / Pengumuman / Acara / Pengaturan.
+/// state preservation across Jadwal / Pengumuman / Acara / Pengaturan.
 /// All T10-T12 feature routes are reachable.
 /// All strings in Bahasa Indonesia.
 library;
@@ -19,7 +19,6 @@ import '../../features/schedule/schedule.dart';
 import '../../features/settings/settings.dart';
 import '../../features/settings/ui/notification_permission_screen.dart';
 import '../shell/editor_placeholder.dart';
-import '../shell/landing_page.dart';
 import '../shell/not_found_page.dart';
 import '../shell/shell.dart';
 
@@ -34,12 +33,12 @@ GoRouter createRouter() {
           return AppShell(navigationShell: navigationShell);
         },
         branches: [
-          // Branch 0: Beranda (Home + Schedule + Detail routes).
+          // Branch 0: Jadwal (Schedule + Detail routes).
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/',
-                builder: (context, state) => const LandingPage(),
+                builder: (context, state) => const SchedulePage(),
                 routes: [
                   GoRoute(
                     path: 'jadwal',
