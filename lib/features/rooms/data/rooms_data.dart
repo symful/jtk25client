@@ -417,3 +417,42 @@ List<RoomSession> findRoomSessions(String roomId, List<ScheduleClass> classes) {
 
   return results;
 }
+
+// ---------------------------------------------------------------------------
+// Day-specific availability helpers
+// ---------------------------------------------------------------------------
+
+/// Check if a room is occupied at any slot on the given day.
+bool isRoomOccupiedOnDay(
+  OccupancyMatrix matrix, {
+  required String roomId,
+  required Day day,
+}) {
+  for (var si = 0; si < kCanonicalSlots.length; si++) {
+    if (isOccupied(matrix, roomId: roomId, day: day, slotIndex: si)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Get all occupancies for a room on a specific day (across all slots),
+/// deduplicated by courseCode + sessionTime.
+List<SessionOccupancy> getRoomDayOccupancies(
+  OccupancyMatrix matrix, {
+  required String roomId,
+  required Day day,
+}) {
+  final results = <SessionOccupancy>[];
+  for (var si = 0; si < kCanonicalSlots.length; si++) {
+    results.addAll(
+      getOccupancies(matrix, roomId: roomId, day: day, slotIndex: si),
+    );
+  }
+  // Deduplicate by courseCode + sessionTime (a session can occupy multiple slots).
+  final seen = <String>{};
+  return results.where((o) {
+    final key = '${o.courseCode}:${o.sessionTime}';
+    return seen.add(key);
+  }).toList();
+}

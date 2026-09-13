@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/models/pengganti.dart';
 import '../../../core/models/schedule.dart';
@@ -45,6 +46,26 @@ class SchedulePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Jadwal'),
         actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              switch (value) {
+                case 'pengganti':
+                  context.push('/pengganti');
+                case 'dosen':
+                  context.push('/dosen');
+                case 'editor':
+                  context.push('/editor');
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'pengganti',
+                child: Text('Jadwal Pengganti'),
+              ),
+              const PopupMenuItem(value: 'dosen', child: Text('Dosen')),
+              const PopupMenuItem(value: 'editor', child: Text('Editor Data')),
+            ],
+          ),
           AppRefreshButton(onRefresh: () => _onRefreshSchedule(context, ref)),
         ],
       ),
@@ -71,7 +92,7 @@ class _ClassSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(selectedClassProvider);
+    final viewed = ref.watch(viewedClassProvider);
 
     return SizedBox(
       height: 56,
@@ -82,12 +103,12 @@ class _ClassSelector extends ConsumerWidget {
         separatorBuilder: (_, idx) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final code = kAllClassCodes[index];
-          final isSelected = code == selected;
+          final isSelected = code == viewed;
           return ChoiceChip(
             label: Text(classLabel(code)),
             selected: isSelected,
             onSelected: (_) {
-              ref.read(selectedClassProvider.notifier).select(code);
+              ref.read(viewedClassProvider.notifier).select(code);
             },
           );
         },
@@ -106,7 +127,7 @@ class _DayChipsRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDay = ref.watch(selectedDayProvider);
-    final classCode = ref.watch(selectedClassProvider);
+    final classCode = ref.watch(viewedClassProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
 
     final daysWithSessions = schedulesAsync.whenOrNull(
@@ -167,7 +188,7 @@ class _ScheduleContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classCode = ref.watch(selectedClassProvider);
+    final classCode = ref.watch(viewedClassProvider);
     final selectedDay = ref.watch(selectedDayProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
     final penggantiAsync = ref.watch(penggantiProvider);

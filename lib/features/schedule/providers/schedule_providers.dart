@@ -70,6 +70,40 @@ final selectedClassProvider = NotifierProvider<_SelectedClassNotifier, String>(
 );
 
 // ---------------------------------------------------------------------------
+// Viewed class (view-local — no persistence)
+// ---------------------------------------------------------------------------
+
+/// Notifier for the currently viewed class in the Jadwal screen.
+///
+/// Initialized from the persistent [selectedClassProvider] (settings class)
+/// on first build, but local changes do NOT persist to Hive and do NOT
+/// trigger FCM topic re-subscription.
+///
+/// This decouples the Jadwal screen's class chips from Settings/FCM so that
+/// switching classes in Jadwal only changes the displayed schedule.
+class _ViewedClassNotifier extends Notifier<String> {
+  @override
+  String build() {
+    // Seed from the settings class so Jadwal opens on the user's chosen class.
+    return ref.watch(selectedClassProvider);
+  }
+
+  /// Select a different class for viewing — does NOT persist.
+  void select(String classCode) {
+    if (!kAllClassCodes.contains(classCode)) return;
+    state = classCode;
+  }
+}
+
+/// View-local class selection for the Jadwal screen.
+///
+/// Changes here only affect what schedule is displayed. They do NOT
+/// change the persisted settings class or FCM topic subscriptions.
+final viewedClassProvider = NotifierProvider<_ViewedClassNotifier, String>(
+  _ViewedClassNotifier.new,
+);
+
+// ---------------------------------------------------------------------------
 // Merged session model
 // ---------------------------------------------------------------------------
 

@@ -71,21 +71,31 @@ final updaterProvider = NotifierProvider<UpdaterNotifier, UpdateState>(
 class UpdaterNotifier extends Notifier<UpdateState> {
   final _client = GitHubReleasesClient();
 
+  /// Set to `true` when the provider is disposed, so the pending microtask
+  /// aborts instead of mutating state on a dead ref.
+  bool _cancelled = false;
+
   @override
   UpdateState build() {
-    // Trigger the check on first build (app launch).
-    _checkForUpdate();
+    ref.onDispose(() => _cancelled = true);
+    // Deferred via microtask so it runs AFTER build() returns the initial
+    // state; reading `state` inside `build()` before it completes is illegal
+    // in a Riverpod Notifier.
+    Future.microtask(_checkForUpdate);
     return const UpdateState();
   }
 
   /// Checks GitHub Releases for a newer version.
   ///
   /// Guards:
+  /// - Cancelled/disposed → early return
   /// - Android-only (no-op on other platforms)
   /// - No prompt on downgrade/equal version
   /// - Silent no-op when release has no .apk asset
   /// - Network failure = silent
   Future<void> _checkForUpdate() async {
+    if (_cancelled) return;
+
     // Android-only guard
     if (defaultTargetPlatform != TargetPlatform.android) {
       return;
@@ -95,8 +105,10 @@ class UpdaterNotifier extends Notifier<UpdateState> {
 
     try {
       final localVersion = await _getAppVersion();
+      if (_cancelled) return;
 
       final release = await _client.fetchLatestRelease();
+      if (_cancelled) return;
 
       if (release == null) {
         // Network failure or malformed response = silent no-op
@@ -136,7 +148,9 @@ class UpdaterNotifier extends Notifier<UpdateState> {
       );
     } catch (_) {
       // Any unexpected error = silent no-op
-      state = state.copyWith(isLoading: false, clearRelease: true);
+      if (!_cancelled) {
+        state = state.copyWith(isLoading: false, clearRelease: true);
+      }
     }
   }
 

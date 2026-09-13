@@ -64,20 +64,6 @@ void main() {
       expect(find.byType(SwitchListTile), findsOneWidget);
     });
 
-    testWidgets('shows "Tentang" about section', (tester) async {
-      // Use large surface so all ListView children are built.
-      tester.view.physicalSize = const Size(800, 2000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      expect(find.text('Tentang'), findsOneWidget);
-      expect(find.text('JTK25 Jadwalku'), findsOneWidget);
-    });
-
     testWidgets('does NOT have "Lihat Detail" button', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
@@ -105,6 +91,22 @@ void main() {
       expect(find.textContaining('Langganan'), findsNothing);
       expect(find.textContaining('Token'), findsNothing);
       expect(find.textContaining('FCM'), findsNothing);
+    });
+
+    testWidgets('shows editor data entry', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Scroll to make the editor section visible.
+      await tester.scrollUntilVisible(
+        find.text('Editor Data'),
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+
+      // Editor Data ListTile.
+      expect(find.text('Editor Data'), findsOneWidget);
+      expect(find.byIcon(Icons.edit), findsOneWidget);
     });
   });
 }

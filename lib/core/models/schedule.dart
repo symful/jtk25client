@@ -106,6 +106,15 @@ class Session {
     );
   }
 
+  /// Safely decode a list of [Session] from raw JSON.
+  ///
+  /// Returns `const []` if [raw] is null, not a list, or contains
+  /// non-map elements (silently skipped).
+  static List<Session> listFromJson(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<Map<String, dynamic>>().map(Session.fromJson).toList();
+  }
+
   Map<String, dynamic> toJson() => {
     'time': time,
     'course_code': courseCode,
@@ -127,9 +136,7 @@ class DaySchedule {
   factory DaySchedule.fromJson(Map<String, dynamic> json) {
     return DaySchedule(
       day: Day.fromJson(json['day'] as String) ?? Day.senin,
-      sessions: (json['sessions'] as List<dynamic>)
-          .map((s) => Session.fromJson(s as Map<String, dynamic>))
-          .toList(),
+      sessions: Session.listFromJson(json['sessions']),
     );
   }
 
@@ -137,6 +144,18 @@ class DaySchedule {
     'day': day.label,
     'sessions': sessions.map((s) => s.toJson()).toList(),
   };
+
+  /// Safely decode a list of [DaySchedule] from raw JSON.
+  ///
+  /// Returns `const []` if [raw] is null, not a list, or contains
+  /// non-map elements (silently skipped).
+  static List<DaySchedule> listFromJson(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(DaySchedule.fromJson)
+        .toList();
+  }
 }
 
 /// A class's full schedule for the semester.
@@ -149,9 +168,7 @@ class ScheduleClass {
   factory ScheduleClass.fromJson(Map<String, dynamic> json) {
     return ScheduleClass(
       className: json['class_name'] as String,
-      schedule: (json['schedule'] as List<dynamic>)
-          .map((d) => DaySchedule.fromJson(d as Map<String, dynamic>))
-          .toList(),
+      schedule: DaySchedule.listFromJson(json['schedule']),
     );
   }
 
@@ -159,6 +176,18 @@ class ScheduleClass {
     'class_name': className,
     'schedule': schedule.map((d) => d.toJson()).toList(),
   };
+
+  /// Safely decode a list of [ScheduleClass] from raw JSON.
+  ///
+  /// Returns `const []` if [raw] is null, not a list, or contains
+  /// non-map elements (silently skipped).
+  static List<ScheduleClass> listFromJson(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(ScheduleClass.fromJson)
+        .toList();
+  }
 }
 
 /// Top-level schedules API response.
@@ -171,9 +200,7 @@ class SchedulesResponse {
   factory SchedulesResponse.fromJson(Map<String, dynamic> json) {
     return SchedulesResponse(
       semester: json['semester'] as String,
-      classes: (json['classes'] as List<dynamic>)
-          .map((c) => ScheduleClass.fromJson(c as Map<String, dynamic>))
-          .toList(),
+      classes: ScheduleClass.listFromJson(json['classes']),
     );
   }
 }

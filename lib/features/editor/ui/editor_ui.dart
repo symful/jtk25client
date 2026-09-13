@@ -14,56 +14,159 @@ import '../providers/editor_providers.dart';
 import '_download_helper.dart'
     if (dart.library.js_interop) '_download_helper_web.dart';
 
+/// Shows a confirmation dialog before deleting. Returns `true` if confirmed.
+Future<bool> _confirmDelete(BuildContext context) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Hapus Item'),
+      content: const Text('Yakin ingin menghapus item ini?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Hapus'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
+
+/// Empty state widget shown when a list has no items.
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Top-level editor page mounted at /editor by the router.
+///
+/// Two-state design: file list (no selection) or editor form (file selected).
 class EditorPage extends ConsumerWidget {
   const EditorPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedType = ref.watch(selectedTypeProvider);
+    final selectedFile = ref.watch(selectedFileProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(selectedFile?.label ?? 'Editor Data'),
+        leading: selectedFile != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () =>
+                    ref.read(selectedFileProvider.notifier).clear(),
+              )
+            : null,
+      ),
+      body: selectedFile == null
+          ? const _FileListView()
+          : _EditorFormView(selectedFile: selectedFile),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// File list view
+// ---------------------------------------------------------------------------
+
+/// Maps editor data type to an icon.
+IconData _iconForType(EditorDataType type) => switch (type) {
+  EditorDataType.schedule => Icons.schedule,
+  EditorDataType.pengganti => Icons.swap_horiz,
+  EditorDataType.announcements => Icons.campaign,
+  EditorDataType.events => Icons.event,
+  EditorDataType.dosen => Icons.person,
+  EditorDataType.rooms => Icons.meeting_room,
+};
+
+/// File list showing all 11 editable data files.
+class _FileListView extends ConsumerWidget {
+  const _FileListView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView.builder(
+      itemCount: kAllEditorFiles.length,
+      itemBuilder: (context, index) {
+        final file = kAllEditorFiles[index];
+        return ListTile(
+          leading: Icon(_iconForType(file.type)),
+          title: Text(file.label),
+          subtitle: Text(file.type.label),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => ref.read(selectedFileProvider.notifier).select(file),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Editor form view
+// ---------------------------------------------------------------------------
+
+/// Editor form view for a selected file.
+class _EditorFormView extends ConsumerWidget {
+  const _EditorFormView({required this.selectedFile});
+
+  final EditorFile selectedFile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final errors = ref.watch(validationErrorsProvider);
     final canExport = ref.watch(canExportProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Editor Data')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Data type selector
-            _DataTypeSelector(selectedType: selectedType),
-            const SizedBox(height: 16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Form area
+          _buildFormArea(selectedFile.type),
+          const SizedBox(height: 16),
 
-            // Form area
-            _buildFormArea(context, ref, selectedType),
-            const SizedBox(height: 16),
+          // Validation errors
+          if (errors.isNotEmpty) _ValidationErrorsPanel(errors: errors),
 
-            // Validation errors
-            if (errors.isNotEmpty) _ValidationErrorsPanel(errors: errors),
+          // Export buttons
+          _ExportPanel(
+            canExport: canExport,
+            onCopy: () => _copyToClipboard(context, ref),
+            onDownload: () => _downloadFile(context, ref),
+          ),
+          const SizedBox(height: 16),
 
-            // Export buttons
-            _ExportPanel(
-              canExport: canExport,
-              onCopy: () => _copyToClipboard(context, ref),
-              onDownload: () => _downloadFile(context, ref),
-            ),
-            const SizedBox(height: 16),
-
-            // PR instructions
-            const _PrInstructionsPanel(),
-          ],
-        ),
+          // PR instructions
+          const _PrInstructionsPanel(),
+        ],
       ),
     );
   }
 
-  Widget _buildFormArea(
-    BuildContext context,
-    WidgetRef ref,
-    EditorDataType selectedType,
-  ) {
-    return switch (selectedType) {
+  Widget _buildFormArea(EditorDataType type) {
+    return switch (type) {
       EditorDataType.schedule => const _ScheduleForm(),
       EditorDataType.pengganti => const _PenggantiForm(),
       EditorDataType.announcements => const _AnnouncementsForm(),
@@ -72,51 +175,27 @@ class EditorPage extends ConsumerWidget {
       EditorDataType.rooms => const _RoomsForm(),
     };
   }
-
-  void _copyToClipboard(BuildContext context, WidgetRef ref) {
-    final json = ref.read(exportJsonProvider);
-    Clipboard.setData(ClipboardData(text: json));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('JSON disalin ke clipboard')));
-  }
-
-  void _downloadFile(BuildContext context, WidgetRef ref) {
-    final json = ref.read(exportJsonProvider);
-    final filename = ref.read(exportFilenameProvider);
-    downloadJsonFile(filename, json);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('File $filename diunduh')));
-  }
 }
 
 // ---------------------------------------------------------------------------
-// Data type selector
+// Export helpers
 // ---------------------------------------------------------------------------
 
-class _DataTypeSelector extends ConsumerWidget {
-  const _DataTypeSelector({required this.selectedType});
+void _copyToClipboard(BuildContext context, WidgetRef ref) {
+  final json = ref.read(exportJsonProvider);
+  Clipboard.setData(ClipboardData(text: json));
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(const SnackBar(content: Text('JSON disalin ke clipboard')));
+}
 
-  final EditorDataType selectedType;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SegmentedButton<EditorDataType>(
-      segments: EditorDataType.values
-          .map(
-            (t) =>
-                ButtonSegment<EditorDataType>(value: t, label: Text(t.label)),
-          )
-          .toList(),
-      selected: {selectedType},
-      onSelectionChanged: (sel) {
-        if (sel.isNotEmpty) {
-          ref.read(selectedTypeProvider.notifier).select(sel.first);
-        }
-      },
-    );
-  }
+void _downloadFile(BuildContext context, WidgetRef ref) {
+  final json = ref.read(exportJsonProvider);
+  final filename = ref.read(exportFilenameProvider);
+  downloadJsonFile(filename, json);
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text('File $filename diunduh')));
 }
 
 // ---------------------------------------------------------------------------
@@ -280,28 +359,32 @@ class _SessionList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView.builder(
-      itemCount: sessions.length + 1,
-      itemBuilder: (context, index) {
-        if (index == sessions.length) {
-          return TextButton.icon(
-            onPressed: () =>
-                ref.read(scheduleFormProvider.notifier).addSession(day),
-            icon: const Icon(Icons.add),
-            label: const Text('Tambah Sesi'),
-          );
-        }
-        final session = sessions[index];
-        return _SessionCard(
-          key: ValueKey('$day-$index-${session.time.hashCode}'),
-          session: session,
-          onChanged: (updated) => ref
-              .read(scheduleFormProvider.notifier)
-              .updateSession(day, index, updated),
-          onDelete: () =>
-              ref.read(scheduleFormProvider.notifier).removeSession(day, index),
-        );
-      },
+    return ListView(
+      children: [
+        if (sessions.isEmpty)
+          const _EmptyState(
+            message: 'Belum ada sesi. Tekan tombol di bawah untuk menambah.',
+          ),
+        for (var i = 0; i < sessions.length; i++)
+          _SessionCard(
+            key: ValueKey('$day-$i-${sessions[i].time.hashCode}'),
+            session: sessions[i],
+            onChanged: (updated) => ref
+                .read(scheduleFormProvider.notifier)
+                .updateSession(day, i, updated),
+            onDelete: () async {
+              if (await _confirmDelete(context)) {
+                ref.read(scheduleFormProvider.notifier).removeSession(day, i);
+              }
+            },
+          ),
+        TextButton.icon(
+          onPressed: () =>
+              ref.read(scheduleFormProvider.notifier).addSession(day),
+          icon: const Icon(Icons.add),
+          label: const Text('Tambah Sesi'),
+        ),
+      ],
     );
   }
 }
@@ -431,7 +514,11 @@ class _SessionCardState extends State<_SessionCard> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
-                  onPressed: widget.onDelete,
+                  onPressed: () async {
+                    if (await _confirmDelete(context)) {
+                      widget.onDelete();
+                    }
+                  },
                 ),
               ],
             ),
@@ -505,6 +592,11 @@ class _PenggantiForm extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
+        if (form.entries.isEmpty)
+          const _EmptyState(
+            message:
+                'Belum ada entri pengganti. Tekan tombol di bawah untuk menambah.',
+          ),
         for (var i = 0; i < form.entries.length; i++)
           _PenggantiEntryCard(entry: form.entries[i], entryIndex: i),
         TextButton.icon(
@@ -552,9 +644,13 @@ class _PenggantiEntryCard extends ConsumerWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: () => ref
-                      .read(penggantiFormProvider.notifier)
-                      .removeEntry(entryIndex),
+                  onPressed: () async {
+                    if (await _confirmDelete(context)) {
+                      ref
+                          .read(penggantiFormProvider.notifier)
+                          .removeEntry(entryIndex);
+                    }
+                  },
                 ),
               ],
             ),
@@ -664,7 +760,7 @@ class _PenggantiEntryCard extends ConsumerWidget {
   }
 }
 
-class _PenggantiSessionTile extends ConsumerWidget {
+class _PenggantiSessionTile extends ConsumerStatefulWidget {
   const _PenggantiSessionTile({
     required this.session,
     required this.entryIndex,
@@ -676,16 +772,183 @@ class _PenggantiSessionTile extends ConsumerWidget {
   final int sessionIndex;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      dense: true,
-      title: Text('${session.time} — ${session.courseName}'),
-      subtitle: Text('${session.type} | ${session.lecturer} | ${session.room}'),
-      trailing: IconButton(
-        icon: const Icon(Icons.remove_circle_outline, size: 20),
-        onPressed: () => ref
-            .read(penggantiFormProvider.notifier)
-            .removeSessionFromEntry(entryIndex, sessionIndex),
+  ConsumerState<_PenggantiSessionTile> createState() =>
+      _PenggantiSessionTileState();
+}
+
+class _PenggantiSessionTileState extends ConsumerState<_PenggantiSessionTile> {
+  late final TextEditingController _timeCtrl;
+  late final TextEditingController _codeCtrl;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _lecturerCodeCtrl;
+  late final TextEditingController _lecturerCtrl;
+  late final TextEditingController _roomCtrl;
+  String _type = 'TE';
+
+  @override
+  void initState() {
+    super.initState();
+    _timeCtrl = TextEditingController(text: widget.session.time);
+    _codeCtrl = TextEditingController(text: widget.session.courseCode);
+    _nameCtrl = TextEditingController(text: widget.session.courseName);
+    _lecturerCodeCtrl = TextEditingController(
+      text: widget.session.lecturerCode,
+    );
+    _lecturerCtrl = TextEditingController(text: widget.session.lecturer);
+    _roomCtrl = TextEditingController(text: widget.session.room);
+    _type = widget.session.type;
+  }
+
+  @override
+  void didUpdateWidget(covariant _PenggantiSessionTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session) {
+      _updateIfChanged(_timeCtrl, widget.session.time);
+      _updateIfChanged(_codeCtrl, widget.session.courseCode);
+      _updateIfChanged(_nameCtrl, widget.session.courseName);
+      _updateIfChanged(_lecturerCodeCtrl, widget.session.lecturerCode);
+      _updateIfChanged(_lecturerCtrl, widget.session.lecturer);
+      _updateIfChanged(_roomCtrl, widget.session.room);
+      if (_type != widget.session.type) _type = widget.session.type;
+    }
+  }
+
+  void _updateIfChanged(TextEditingController ctrl, String value) {
+    if (ctrl.text != value) ctrl.text = value;
+  }
+
+  void _emit() {
+    ref
+        .read(penggantiFormProvider.notifier)
+        .updateSessionInEntry(
+          widget.entryIndex,
+          widget.sessionIndex,
+          PenggantiSessionForm(
+            time: _timeCtrl.text,
+            courseCode: _codeCtrl.text,
+            courseName: _nameCtrl.text,
+            type: _type,
+            lecturerCode: _lecturerCodeCtrl.text,
+            lecturer: _lecturerCtrl.text,
+            room: _roomCtrl.text,
+          ),
+        );
+  }
+
+  @override
+  void dispose() {
+    _timeCtrl.dispose();
+    _codeCtrl.dispose();
+    _nameCtrl.dispose();
+    _lecturerCodeCtrl.dispose();
+    _lecturerCtrl.dispose();
+    _roomCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _timeCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Waktu (07.00-07.50)',
+                      isDense: true,
+                    ),
+                    onChanged: (_) => _emit(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 80,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _type,
+                    items: const [
+                      DropdownMenuItem(value: 'TE', child: Text('TE')),
+                      DropdownMenuItem(value: 'PR', child: Text('PR')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => _type = v);
+                        _emit();
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Tipe',
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  onPressed: () async {
+                    if (await _confirmDelete(context)) {
+                      ref
+                          .read(penggantiFormProvider.notifier)
+                          .removeSessionFromEntry(
+                            widget.entryIndex,
+                            widget.sessionIndex,
+                          );
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _codeCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Kode Mata Kuliah',
+                isDense: true,
+              ),
+              onChanged: (_) => _emit(),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nama Mata Kuliah',
+                isDense: true,
+              ),
+              onChanged: (_) => _emit(),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _lecturerCodeCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Kode Dosen',
+                isDense: true,
+              ),
+              onChanged: (_) => _emit(),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _lecturerCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nama Dosen',
+                isDense: true,
+              ),
+              onChanged: (_) => _emit(),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _roomCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Ruang',
+                isDense: true,
+              ),
+              onChanged: (_) => _emit(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -709,6 +972,11 @@ class _AnnouncementsForm extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
+        if (items.isEmpty)
+          const _EmptyState(
+            message:
+                'Belum ada pengumuman. Tekan tombol di bawah untuk menambah.',
+          ),
         for (var i = 0; i < items.length; i++)
           _AnnouncementCard(item: items[i], index: i),
         TextButton.icon(
@@ -861,11 +1129,39 @@ class _AnnouncementCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Sematkan', style: TextStyle(fontSize: 12)),
+                    Switch(
+                      value: item.pinned,
+                      onChanged: (v) {
+                        ref
+                            .read(announcementsFormProvider.notifier)
+                            .update(
+                              index,
+                              Announcement(
+                                id: item.id,
+                                title: item.title,
+                                body: item.body,
+                                pinned: v,
+                                createdAt: item.createdAt,
+                                expiresAt: item.expiresAt,
+                              ),
+                            );
+                      },
+                    ),
+                  ],
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: () => ref
-                      .read(announcementsFormProvider.notifier)
-                      .remove(index),
+                  onPressed: () async {
+                    if (await _confirmDelete(context)) {
+                      ref
+                          .read(announcementsFormProvider.notifier)
+                          .remove(index);
+                    }
+                  },
                 ),
               ],
             ),
@@ -894,6 +1190,10 @@ class _EventsForm extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
+        if (items.isEmpty)
+          const _EmptyState(
+            message: 'Belum ada acara. Tekan tombol di bawah untuk menambah.',
+          ),
         for (var i = 0; i < items.length; i++)
           _EventCard(item: items[i], index: i),
         TextButton.icon(
@@ -948,6 +1248,18 @@ class _EventCard extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Deskripsi (opsional)',
+                isDense: true,
+              ),
+              maxLines: 2,
+              controller: TextEditingController(text: item.description),
+              onChanged: (v) => ref
+                  .read(eventsFormProvider.notifier)
+                  .update(index, _copyWith(item, description: v)),
             ),
             const SizedBox(height: 8),
             Row(
@@ -1008,8 +1320,11 @@ class _EventCard extends ConsumerWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: () =>
-                      ref.read(eventsFormProvider.notifier).remove(index),
+                  onPressed: () async {
+                    if (await _confirmDelete(context)) {
+                      ref.read(eventsFormProvider.notifier).remove(index);
+                    }
+                  },
                 ),
               ],
             ),
@@ -1032,6 +1347,7 @@ class _EventCard extends ConsumerWidget {
   JtkEvent _copyWith(
     JtkEvent e, {
     String? title,
+    String? description,
     String? date,
     String? endDate,
     String? location,
@@ -1039,7 +1355,7 @@ class _EventCard extends ConsumerWidget {
   }) => JtkEvent(
     id: e.id,
     title: title ?? e.title,
-    description: e.description,
+    description: description ?? e.description,
     date: date ?? e.date,
     endDate: endDate ?? e.endDate,
     location: location ?? e.location,
@@ -1065,6 +1381,10 @@ class _DosenForm extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
+        if (items.isEmpty)
+          const _EmptyState(
+            message: 'Belum ada dosen. Tekan tombol di bawah untuk menambah.',
+          ),
         for (var i = 0; i < items.length; i++)
           _DosenCard(item: items[i], index: i),
         TextButton.icon(
@@ -1144,8 +1464,11 @@ class _DosenCard extends ConsumerWidget {
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              onPressed: () =>
-                  ref.read(dosenFormProvider.notifier).remove(index),
+              onPressed: () async {
+                if (await _confirmDelete(context)) {
+                  ref.read(dosenFormProvider.notifier).remove(index);
+                }
+              },
             ),
           ],
         ),
@@ -1172,6 +1495,10 @@ class _RoomsForm extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
+        if (items.isEmpty)
+          const _EmptyState(
+            message: 'Belum ada ruangan. Tekan tombol di bawah untuk menambah.',
+          ),
         for (var i = 0; i < items.length; i++)
           _RoomCard(item: items[i], index: i),
         TextButton.icon(
@@ -1257,8 +1584,11 @@ class _RoomCard extends ConsumerWidget {
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              onPressed: () =>
-                  ref.read(roomsFormProvider.notifier).remove(index),
+              onPressed: () async {
+                if (await _confirmDelete(context)) {
+                  ref.read(roomsFormProvider.notifier).remove(index);
+                }
+              },
             ),
           ],
         ),

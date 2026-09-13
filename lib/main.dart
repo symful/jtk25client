@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:workmanager/workmanager.dart';
@@ -15,8 +16,9 @@ import 'core/cache/offline_cache.dart';
 import 'core/notifications/fcm_service.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/notifications/workmanager_callback.dart';
-import 'firebase_options.dart';
+import 'features/announcements/data/announcements_data.dart';
 import 'features/settings/data/settings_data.dart';
+import 'firebase_options.dart';
 
 /// Global scaffold messenger key for web Snackbar fallback.
 final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -37,6 +39,12 @@ void main() async {
 
   // Open settings box for class selection persistence.
   await Hive.openBox(kSettingsBoxName);
+
+  // Initialize announcements seen-ID tracker.
+  await AnnouncementsSeen().init();
+
+  // Initialize intl date formatting for Indonesian locale.
+  await initializeDateFormatting('id_ID');
 
   // Initialize offline cache boxes for network-first, cache-fallback strategy.
   await OfflineCache().init();

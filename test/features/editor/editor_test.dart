@@ -4,6 +4,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jtk25_client/core/models/models.dart';
 import 'package:jtk25_client/features/editor/editor.dart';
@@ -313,6 +314,318 @@ void main() {
       expect(instructions, contains('Fork repository'));
       expect(instructions, contains('symful/jtk25server'));
       expect(instructions, contains('pengganti'));
+    });
+  });
+
+  group('Unified editor file list', () {
+    test('kAllEditorFiles has exactly 11 entries', () {
+      expect(kAllEditorFiles.length, 11);
+    });
+
+    test('all 6 schedule files have classCode', () {
+      final scheduleFiles = kAllEditorFiles.where(
+        (f) => f.type == EditorDataType.schedule,
+      );
+      expect(scheduleFiles.length, 6);
+      for (final file in scheduleFiles) {
+        expect(file.classCode, isNotNull);
+      }
+    });
+
+    test('non-schedule files have null classCode', () {
+      final nonSchedule = kAllEditorFiles.where(
+        (f) => f.type != EditorDataType.schedule,
+      );
+      for (final file in nonSchedule) {
+        expect(file.classCode, isNull);
+      }
+    });
+
+    test('all file labels are unique', () {
+      final labels = kAllEditorFiles.map((f) => f.label).toList();
+      expect(labels.toSet().length, labels.length);
+    });
+
+    test('covers all data types', () {
+      final types = kAllEditorFiles.map((f) => f.type).toSet();
+      expect(types, containsAll(EditorDataType.values));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // CRUD provider tests (announcements, rooms, schedule)
+  // -------------------------------------------------------------------------
+
+  group('Announcements CRUD', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      container = ProviderContainer();
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    test('add() appends a new announcement', () {
+      expect(container.read(announcementsFormProvider), isEmpty);
+      container.read(announcementsFormProvider.notifier).add();
+      final items = container.read(announcementsFormProvider);
+      expect(items.length, 1);
+      expect(items.first.title, '');
+      expect(items.first.body, '');
+    });
+
+    test('update() modifies an existing announcement', () {
+      container.read(announcementsFormProvider.notifier).add();
+      final updated = Announcement(
+        id: 'test-id',
+        title: 'Judul Baru',
+        body: 'Isi pengumuman',
+        pinned: true,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+      container.read(announcementsFormProvider.notifier).update(0, updated);
+      final items = container.read(announcementsFormProvider);
+      expect(items.first.title, 'Judul Baru');
+      expect(items.first.body, 'Isi pengumuman');
+      expect(items.first.pinned, isTrue);
+    });
+
+    test('remove() deletes an announcement by index', () {
+      container.read(announcementsFormProvider.notifier).add();
+      container.read(announcementsFormProvider.notifier).add();
+      expect(container.read(announcementsFormProvider).length, 2);
+
+      container.read(announcementsFormProvider.notifier).remove(0);
+      final items = container.read(announcementsFormProvider);
+      expect(items.length, 1);
+    });
+
+    test('remove() on last item leaves empty list', () {
+      container.read(announcementsFormProvider.notifier).add();
+      container.read(announcementsFormProvider.notifier).remove(0);
+      expect(container.read(announcementsFormProvider), isEmpty);
+    });
+
+    test('export envelope reflects post-CRUD state', () {
+      container.read(announcementsFormProvider.notifier).add();
+      container.read(announcementsFormProvider.notifier).add();
+      container.read(announcementsFormProvider.notifier).remove(0);
+
+      final items = container.read(announcementsFormProvider);
+      expect(items.length, 1);
+
+      final envelope = buildAnnouncementsEnvelope(items);
+      expect(envelope['schema'], 2);
+      expect((envelope['data'] as List).length, 1);
+    });
+  });
+
+  group('Rooms CRUD', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      container = ProviderContainer();
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    test('add() appends a new room', () {
+      expect(container.read(roomsFormProvider), isEmpty);
+      container.read(roomsFormProvider.notifier).add();
+      final items = container.read(roomsFormProvider);
+      expect(items.length, 1);
+      expect(items.first.id, '');
+      expect(items.first.name, '');
+    });
+
+    test('update() modifies an existing room', () {
+      container.read(roomsFormProvider.notifier).add();
+      final updated = Room(
+        id: 'H501',
+        name: 'Lab TI',
+        type: RoomType.fromJson('lab'),
+      );
+      container.read(roomsFormProvider.notifier).update(0, updated);
+      final items = container.read(roomsFormProvider);
+      expect(items.first.id, 'H501');
+      expect(items.first.name, 'Lab TI');
+      expect(items.first.type?.label, 'lab');
+    });
+
+    test('remove() deletes a room by index', () {
+      container.read(roomsFormProvider.notifier).add();
+      container.read(roomsFormProvider.notifier).add();
+      expect(container.read(roomsFormProvider).length, 2);
+
+      container.read(roomsFormProvider.notifier).remove(1);
+      final items = container.read(roomsFormProvider);
+      expect(items.length, 1);
+    });
+
+    test('remove() on last item leaves empty list', () {
+      container.read(roomsFormProvider.notifier).add();
+      container.read(roomsFormProvider.notifier).remove(0);
+      expect(container.read(roomsFormProvider), isEmpty);
+    });
+
+    test('export envelope reflects post-CRUD state', () {
+      container.read(roomsFormProvider.notifier).add();
+      container.read(roomsFormProvider.notifier).add();
+      container.read(roomsFormProvider.notifier).add();
+      container.read(roomsFormProvider.notifier).remove(1);
+
+      final items = container.read(roomsFormProvider);
+      expect(items.length, 2);
+
+      final envelope = buildRoomsEnvelope(items);
+      expect(envelope['schema'], 2);
+      expect((envelope['data'] as List).length, 2);
+    });
+  });
+
+  group('Schedule CRUD (D3-2A, SENIN)', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      container = ProviderContainer();
+      container.read(scheduleFormProvider.notifier).selectClass('D3-2A');
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    test('addSession() appends a new session to SENIN', () {
+      final before = container.read(scheduleFormProvider).days['SENIN']!;
+      expect(before, isEmpty);
+
+      container.read(scheduleFormProvider.notifier).addSession('SENIN');
+      final after = container.read(scheduleFormProvider).days['SENIN']!;
+      expect(after.length, 1);
+    });
+
+    test('updateSession() modifies fields on an existing session', () {
+      container.read(scheduleFormProvider.notifier).addSession('SENIN');
+      final updated = SessionForm(
+        time: '08.00-08.50',
+        courseCode: '25IF2116',
+        courseName: 'Proyek 3',
+        type: 'PR',
+        lecturerCode: 'MV',
+        lecturer: 'Maisevli Harika',
+        room: 'H501-Lab. TI',
+      );
+      container
+          .read(scheduleFormProvider.notifier)
+          .updateSession('SENIN', 0, updated);
+
+      final session = container.read(scheduleFormProvider).days['SENIN']!.first;
+      expect(session.time, '08.00-08.50');
+      expect(session.courseCode, '25IF2116');
+      expect(session.lecturer, 'Maisevli Harika');
+    });
+
+    test('removeSession() deletes a session by index', () {
+      container.read(scheduleFormProvider.notifier).addSession('SENIN');
+      container.read(scheduleFormProvider.notifier).addSession('SENIN');
+      expect(container.read(scheduleFormProvider).days['SENIN']!.length, 2);
+
+      container.read(scheduleFormProvider.notifier).removeSession('SENIN', 0);
+      final sessions = container.read(scheduleFormProvider).days['SENIN']!;
+      expect(sessions.length, 1);
+    });
+
+    test('removeSession() on last item leaves empty day', () {
+      container.read(scheduleFormProvider.notifier).addSession('SENIN');
+      container.read(scheduleFormProvider.notifier).removeSession('SENIN', 0);
+      expect(container.read(scheduleFormProvider).days['SENIN'], isEmpty);
+    });
+
+    test('loadFromClass() loads existing data then add/edit/remove work', () {
+      final sc = ScheduleClass(
+        className: 'D3-2A',
+        schedule: [
+          DaySchedule(
+            day: Day.senin,
+            sessions: [
+              const Session(
+                time: '07.00-07.50',
+                courseCode: '25IF2116',
+                courseName: 'Proyek 3',
+                type: CourseType.pr,
+                lecturerCode: 'MV',
+                lecturer: 'Maisevli Harika',
+                room: 'H501-Lab. TI',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      container.read(scheduleFormProvider.notifier).loadFromClass(sc);
+      expect(container.read(scheduleFormProvider).days['SENIN']!.length, 1);
+
+      // Edit
+      final edited = SessionForm.fromSession(
+        const Session(
+          time: '07.00-07.50',
+          courseCode: '25IF9999',
+          courseName: 'Edited Course',
+          type: CourseType.te,
+          lecturerCode: 'XX',
+          lecturer: 'New Lecturer',
+          room: 'A101',
+        ),
+      );
+      container
+          .read(scheduleFormProvider.notifier)
+          .updateSession('SENIN', 0, edited);
+
+      final session = container.read(scheduleFormProvider).days['SENIN']!.first;
+      expect(session.courseCode, '25IF9999');
+      expect(session.courseName, 'Edited Course');
+
+      // Add
+      container.read(scheduleFormProvider.notifier).addSession('SENIN');
+      expect(container.read(scheduleFormProvider).days['SENIN']!.length, 2);
+
+      // Remove
+      container.read(scheduleFormProvider.notifier).removeSession('SENIN', 0);
+      expect(container.read(scheduleFormProvider).days['SENIN']!.length, 1);
+    });
+
+    test('export envelope reflects post-CRUD state', () {
+      container.read(scheduleFormProvider.notifier).addSession('SENIN');
+      final edited = SessionForm(
+        time: '07.00-07.50',
+        courseCode: '25IF2116',
+        courseName: 'Proyek 3',
+        type: 'PR',
+        lecturerCode: 'MV',
+        lecturer: 'Maisevli Harika',
+        room: 'H501-Lab. TI',
+      );
+      container
+          .read(scheduleFormProvider.notifier)
+          .updateSession('SENIN', 0, edited);
+      container.read(scheduleFormProvider.notifier).removeSession('SENIN', 0);
+
+      // Empty state should still produce valid envelope
+      final envelope = container.read(scheduleFormProvider).toEnvelope();
+      expect(envelope['schema'], 2);
+
+      final result = validateAgainst(envelope, JtkSchemas.scheduleClass);
+      expect(
+        result.isValid,
+        isTrue,
+        reason: result.errors
+            .map((e) => '${e.fieldKey}: ${e.message}')
+            .join(', '),
+      );
     });
   });
 }

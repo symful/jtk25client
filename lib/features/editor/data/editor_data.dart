@@ -199,6 +199,61 @@ enum EditorDataType {
   final String label;
 }
 
+/// Represents one of the 11 editable data files.
+class EditorFile {
+  const EditorFile({required this.type, required this.label, this.classCode});
+
+  /// The data type category.
+  final EditorDataType type;
+
+  /// Display label for the file.
+  final String label;
+
+  /// Class code for schedule files (e.g. 'D3-2A'), null for non-schedule.
+  final String? classCode;
+}
+
+/// All 11 editable data files.
+const List<EditorFile> kAllEditorFiles = [
+  // Jadwal (6 classes)
+  EditorFile(
+    type: EditorDataType.schedule,
+    label: 'Jadwal D3-2A',
+    classCode: 'D3-2A',
+  ),
+  EditorFile(
+    type: EditorDataType.schedule,
+    label: 'Jadwal D3-2B',
+    classCode: 'D3-2B',
+  ),
+  EditorFile(
+    type: EditorDataType.schedule,
+    label: 'Jadwal D4-2A',
+    classCode: 'D4-2A',
+  ),
+  EditorFile(
+    type: EditorDataType.schedule,
+    label: 'Jadwal D4-2B',
+    classCode: 'D4-2B',
+  ),
+  EditorFile(
+    type: EditorDataType.schedule,
+    label: 'Jadwal D4-2C',
+    classCode: 'D4-2C',
+  ),
+  EditorFile(
+    type: EditorDataType.schedule,
+    label: 'Jadwal D4-2D',
+    classCode: 'D4-2D',
+  ),
+  // Other data types
+  EditorFile(type: EditorDataType.pengganti, label: 'Pengganti'),
+  EditorFile(type: EditorDataType.announcements, label: 'Pengumuman'),
+  EditorFile(type: EditorDataType.events, label: 'Acara'),
+  EditorFile(type: EditorDataType.dosen, label: 'Dosen'),
+  EditorFile(type: EditorDataType.rooms, label: 'Ruangan'),
+];
+
 /// Generate PR instructions in Bahasa Indonesia for a given filename.
 String generatePrInstructions(String filename) {
   final targetName = filename.replaceAll('.json', '').replaceAll('_', ' ');

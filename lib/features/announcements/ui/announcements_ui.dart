@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/models/announcement.dart';
-import '../../../core/cache/offline_cache.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/ui/refresh_helpers.dart';
 import '../providers/announcements_providers.dart';
@@ -24,7 +23,7 @@ Future<void> _onRefreshAnnouncements(
   await refreshData(
     context,
     ref,
-    keys: [CacheKey.announcements],
+    endpoints: ['/api/v1/announcements'],
     refresh: () async {
       ref.invalidate(announcementsProvider);
       await ref.read(announcementsProvider.future);
@@ -33,13 +32,15 @@ Future<void> _onRefreshAnnouncements(
 }
 
 /// Full-screen list of active announcements.
+///
+/// Watches [announcementsProvider] directly for loading/error/data
+/// (same pattern as schedule_ui.dart watches schedulesProvider).
 class AnnouncementsListPage extends ConsumerWidget {
   const AnnouncementsListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncItems = ref.watch(filteredAnnouncementsProvider);
-    final fromCache = ref.watch(announcementsFromCacheProvider);
+    final announcementsAsync = ref.watch(announcementsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -50,7 +51,7 @@ class AnnouncementsListPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: asyncItems.when(
+      body: announcementsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Text(
@@ -58,34 +59,23 @@ class AnnouncementsListPage extends ConsumerWidget {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
-        data: (items) {
+        data: (_) {
+          // Filtered/sorted data comes from the sync derivation.
+          final items = ref.watch(filteredAnnouncementsProvider);
           if (items.isEmpty) {
             return const Center(child: Text('Belum ada pengumuman'));
           }
-          return Column(
-            children: [
-              if (fromCache)
-                const MaterialBanner(
-                  content: Text('Menampilkan data tersimpan'),
-                  leading: Icon(Icons.info_outline),
-                  actions: [],
-                ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => _onRefreshAnnouncements(context, ref),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: items.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 4),
-                    itemBuilder: (context, i) {
-                      final a = items[i];
-                      return _AnnouncementTile(announcement: a);
-                    },
-                  ),
-                ),
-              ),
-            ],
+          return RefreshIndicator(
+            onRefresh: () => _onRefreshAnnouncements(context, ref),
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: items.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 4),
+              itemBuilder: (context, i) {
+                final a = items[i];
+                return _AnnouncementTile(announcement: a);
+              },
+            ),
           );
         },
       ),

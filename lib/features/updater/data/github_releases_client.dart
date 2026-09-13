@@ -36,6 +36,7 @@ class GitHubReleasesClient {
         '/repos/$_owner/$_repo/releases/latest',
       );
       if (resp.statusCode != 200) return null;
+      if (resp.data is! Map) return null;
       return ReleaseInfo.fromJson(Map<String, dynamic>.from(resp.data as Map));
     } on DioException {
       // Network failure = silent no-op
@@ -92,11 +93,12 @@ class ReleaseInfo {
         ? DateTime.parse(json['published_at'] as String)
         : DateTime.now();
 
-    // Find first .apk asset
+    // Find first .apk asset — safely iterate the list.
     String? apkUrl;
-    final assets = json['assets'] as List<dynamic>?;
-    if (assets != null) {
-      for (final asset in assets) {
+    final rawAssets = json['assets'];
+    if (rawAssets is List) {
+      for (final asset in rawAssets) {
+        if (asset is! Map) continue;
         final url = asset['browser_download_url'] as String? ?? '';
         if (url.toLowerCase().endsWith('.apk')) {
           apkUrl = url;

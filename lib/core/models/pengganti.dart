@@ -50,12 +50,32 @@ class PenggantiEntry {
       date: json['date'] as String,
       kind: PenggantiKind.fromJson(json['kind'] as String),
       note: json['note'] as String?,
-      sessions:
-          (json['sessions'] as List<dynamic>?)
-              ?.map((s) => Session.fromJson(s as Map<String, dynamic>))
-              .toList() ??
-          const [],
+      sessions: Session.listFromJson(json['sessions']),
     );
+  }
+
+  /// Safely decode a list of [PenggantiEntry] from raw JSON.
+  ///
+  /// Accepts a raw JSON array or a `{"data": [...]}` envelope.
+  /// Returns `const []` if [raw] is null, not a list, or contains
+  /// non-map elements (silently skipped).
+  static List<PenggantiEntry> listFromJson(dynamic raw) {
+    final list = _unwrapList(raw);
+    return list.map((e) => PenggantiEntry.fromJson(e)).toList();
+  }
+
+  static List<Map<String, dynamic>> _unwrapList(dynamic raw) {
+    final List<dynamic>? items;
+    if (raw is List) {
+      items = raw;
+    } else if (raw is Map<String, dynamic>) {
+      final inner = raw['data'];
+      items = inner is List ? inner : null;
+    } else {
+      items = null;
+    }
+    if (items == null) return const [];
+    return items.whereType<Map<String, dynamic>>().toList();
   }
 
   Map<String, dynamic> toJson() => {

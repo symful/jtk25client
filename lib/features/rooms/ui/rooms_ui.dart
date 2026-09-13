@@ -1,7 +1,7 @@
 /// Rooms feature UI — searchable room list, detail, and availability matrix.
 ///
-/// Shows room occupancy across Senin–Jumat × time slots. Supports
-/// "Tersedia sekarang" toggle and overlap markers.
+/// Shows room occupancy across Senin-Jumat with day-chip selection.
+/// Supports search, overlap markers, and "Tersedia sekarang" indicator.
 /// All strings in Bahasa Indonesia.
 library;
 
@@ -36,13 +36,16 @@ Future<void> _onRefreshRooms(BuildContext context, WidgetRef ref) async {
   );
 }
 
-/// Full-screen searchable room list with availability summary.
+/// Full-screen searchable room list with day-specific availability.
+///
+/// Watches [roomsProvider] and [schedulesProvider] directly for
+/// loading/error/data (same pattern as schedule_ui.dart).
 class RoomsListPage extends ConsumerWidget {
   const RoomsListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final filtered = ref.watch(filteredRoomsProvider);
+    final roomsAsync = ref.watch(roomsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -51,85 +54,143 @@ class RoomsListPage extends ConsumerWidget {
           AppRefreshButton(onRefresh: () => _onRefreshRooms(context, ref)),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Cari ruangan...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+      body: roomsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Text(
+            'Gagal memuat ruangan',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+        data: (_) {
+          // Filtered room list from the sync derivation.
+          final filtered = ref.watch(filteredRoomsProvider);
+          return Column(
+            children: [
+              // Day chips.
+              const _RoomDayChipsRow(),
+              // Search bar.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'Cari ruangan...',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    ref.read(roomSearchProvider.notifier).update(value);
+                  },
                 ),
               ),
-              onChanged: (value) {
-                ref.read(roomSearchProvider.notifier).update(value);
-              },
-            ),
-          ),
-          // Available now summary.
-          const _AvailableNowBanner(),
-          // Room list.
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => _onRefreshRooms(context, ref),
-              child: filtered.isEmpty
-                  ? ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 100),
-                        Center(
-                          child: Text(
-                            'Tidak ada ruangan ditemukan',
-                            style: TextStyle(color: Colors.grey),
-                          ),
+              // Available count summary.
+              const _DayAvailableBanner(),
+              // Room list.
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => _onRefreshRooms(context, ref),
+                  child: filtered.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 100),
+                            Center(
+                              child: Text(
+                                'Tidak ada ruangan ditemukan',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            return _RoomListTile(room: filtered[index]);
+                          },
                         ),
-                      ],
-                    )
-                  : ListView.separated(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        return _RoomListTile(room: filtered[index]);
-                      },
-                    ),
-            ),
-          ),
-          // Matrix button.
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => context.push('/ruangan/matriks'),
-                icon: const Icon(Icons.grid_on),
-                label: const Text('Matriks Ketersediaan'),
+                ),
               ),
-            ),
-          ),
-        ],
+              // Matrix button.
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => context.push('/ruangan/matriks'),
+                    icon: const Icon(Icons.grid_on),
+                    label: const Text('Matriks Ketersediaan'),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Available now banner
+// Day chips row for room availability
 // ---------------------------------------------------------------------------
 
-class _AvailableNowBanner extends ConsumerWidget {
-  const _AvailableNowBanner();
+class _RoomDayChipsRow extends ConsumerWidget {
+  const _RoomDayChipsRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref.watch(availableNowSummaryProvider);
+    final selectedDay = ref.watch(selectedRoomDayProvider);
+
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        scrollDirection: Axis.horizontal,
+        itemCount: kWorkdays.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, index) {
+          final day = kWorkdays[index];
+          return ChoiceChip(
+            label: Text(_dayLabel(day)),
+            selected: day == selectedDay,
+            onSelected: (_) {
+              ref.read(selectedRoomDayProvider.notifier).selectDay(day);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+String _dayLabel(Day day) => switch (day) {
+  Day.senin => 'Senin',
+  Day.selasa => 'Selasa',
+  Day.rabu => 'Rabu',
+  Day.kamis => 'Kamis',
+  Day.jumat => 'Jumat',
+  Day.sabtu => 'Sabtu',
+  Day.minggu => 'Minggu',
+};
+
+// ---------------------------------------------------------------------------
+// Day-specific availability banner
+// ---------------------------------------------------------------------------
+
+class _DayAvailableBanner extends ConsumerWidget {
+  const _DayAvailableBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summary = ref.watch(dayAvailableCountProvider);
 
     return Container(
       width: double.infinity,
@@ -145,7 +206,7 @@ class _AvailableNowBanner extends ConsumerWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              summary,
+              '$summary — hanya berisi data semester 3, cek repo untuk kontribusi data room avaibility',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.w600,
@@ -170,22 +231,34 @@ class _RoomListTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final matrix = ref.watch(occupancyMatrixProvider);
-    final now = DateTime.now();
-    final available = isAvailableNow(matrix, roomId: room.id, now: now);
+    final selectedDay = ref.watch(selectedRoomDayProvider);
+    final occupied = isRoomOccupiedOnDay(
+      matrix,
+      roomId: room.id,
+      day: selectedDay,
+    );
+
+    // Get the first session for preview text.
+    final occupancies = getRoomDayOccupancies(
+      matrix,
+      roomId: room.id,
+      day: selectedDay,
+    );
+    final subtitle = occupancies.isNotEmpty
+        ? '${occupancies.first.courseCode} · ${occupancies.first.sessionTime}'
+        : (room.type == RoomType.lab ? 'Laboratorium' : 'Ruang Kelas');
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: available ? Colors.green.shade50 : Colors.red.shade50,
+        backgroundColor: occupied ? Colors.red.shade50 : Colors.green.shade50,
         child: Icon(
-          available ? Icons.check : Icons.close,
-          color: available ? Colors.green.shade700 : Colors.red.shade700,
+          occupied ? Icons.close : Icons.check,
+          color: occupied ? Colors.red.shade700 : Colors.green.shade700,
           size: 20,
         ),
       ),
       title: Text(room.name),
-      subtitle: Text(
-        room.type == RoomType.lab ? 'Laboratorium' : 'Ruang Kelas',
-      ),
+      subtitle: Text(subtitle),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         context.push('/ruangan/${Uri.encodeComponent(room.id)}');
@@ -574,32 +647,37 @@ class _RoomMatrix extends StatelessWidget {
             ],
           ),
         ),
-        // Grid: header + slot rows.
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: _buildGrid(context),
+        // Grid: fitted to available width — no horizontal scroll.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const labelW = 38.0;
+            final cellW = (constraints.maxWidth - labelW) / 5;
+            return _buildGrid(context, cellW: cellW, labelW: labelW);
+          },
         ),
         const SizedBox(height: 8),
       ],
     );
   }
 
-  Widget _buildGrid(BuildContext context) {
-    const cellW = 64.0;
+  Widget _buildGrid(
+    BuildContext context, {
+    required double cellW,
+    required double labelW,
+  }) {
     const cellH = 32.0;
-    const labelW = 52.0;
     const headerH = 28.0;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Table(
-      defaultColumnWidth: const FixedColumnWidth(cellW),
-      columnWidths: {0: const FixedColumnWidth(labelW)},
+      defaultColumnWidth: FixedColumnWidth(cellW),
+      columnWidths: {0: FixedColumnWidth(labelW)},
       children: [
         // Header row.
         TableRow(
           decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest),
           children: [
-            SizedBox(height: headerH), // Empty corner.
+            SizedBox(height: headerH),
             for (final day in kWorkdays)
               SizedBox(
                 height: headerH,
@@ -619,15 +697,15 @@ class _RoomMatrix extends StatelessWidget {
         for (var si = 0; si < kCanonicalSlots.length; si++)
           TableRow(
             children: [
-              // Slot time label.
+              // Slot time label (compact: "07.00-07.50" → "7:00").
               Container(
                 height: cellH,
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.only(right: 4),
                 child: Text(
-                  kCanonicalSlots[si].split('-').first,
+                  _compactSlotLabel(kCanonicalSlots[si]),
                   style: const TextStyle(
-                    fontSize: 9,
+                    fontSize: 8,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -650,6 +728,14 @@ class _RoomMatrix extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Compact slot label: "07.00-07.50" → "7:00".
+String _compactSlotLabel(String slot) {
+  final start = slot.split('-').first;
+  final parts = start.split('.');
+  final hour = int.tryParse(parts.first) ?? 0;
+  return '$hour:${parts.last}';
 }
 
 // ---------------------------------------------------------------------------

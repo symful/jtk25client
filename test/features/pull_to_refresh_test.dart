@@ -97,7 +97,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            filteredAnnouncementsProvider.overrideWithValue(AsyncData(items)),
+            // Core provider — UI watches this directly for loading/error/data.
+            announcementsProvider.overrideWithValue(AsyncData(items)),
+            // Feature-local derivation — sync Provider, pass list directly.
+            filteredAnnouncementsProvider.overrideWithValue(items),
             announcementsSeenProvider.overrideWithValue(fakeSeen),
           ],
           child: const MaterialApp(home: AnnouncementsListPage()),

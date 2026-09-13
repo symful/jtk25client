@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/announcements/providers/announcements_providers.dart';
+import '../../features/updater/updater.dart';
 
 /// Responsive shell scaffold wrapping the app's tab navigation.
 class AppShell extends ConsumerWidget {
@@ -25,7 +26,7 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isWide = MediaQuery.sizeOf(context).width > _wideBreakpoint;
     final hasUnseen = ref.watch(hasUnseenAnnouncementsProvider);
-    final unseen = hasUnseen.value ?? false;
+    final unseen = hasUnseen;
     final colorScheme = Theme.of(context).colorScheme;
 
     // Build the icon for the Pengumuman tab with optional badge.
@@ -53,6 +54,11 @@ class AppShell extends ConsumerWidget {
                   selectedIcon: Icon(Icons.schedule),
                   label: Text('Jadwal'),
                 ),
+                const NavigationRailDestination(
+                  icon: Icon(Icons.meeting_room_outlined),
+                  selectedIcon: Icon(Icons.meeting_room),
+                  label: Text('Ruangan'),
+                ),
                 NavigationRailDestination(
                   icon: pengumumanIcon(),
                   selectedIcon: pengumumanIcon(isSelected: true),
@@ -71,22 +77,28 @@ class AppShell extends ConsumerWidget {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: navigationShell),
+            Expanded(child: UpdaterShell(child: navigationShell)),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: navigationShell,
+      body: UpdaterShell(child: navigationShell),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
+        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11)),
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.schedule_outlined),
             selectedIcon: Icon(Icons.schedule),
             label: 'Jadwal',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.meeting_room_outlined),
+            selectedIcon: Icon(Icons.meeting_room),
+            label: 'Ruangan',
           ),
           NavigationDestination(
             icon: pengumumanIcon(),

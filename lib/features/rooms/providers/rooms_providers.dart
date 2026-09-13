@@ -1,4 +1,4 @@
-/// Rooms feature providers — search, filter, availability matrix.
+/// Rooms feature providers — search, filter, day selection, availability matrix.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +7,31 @@ import '../../../core/models/room.dart';
 import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
 import '../data/rooms_data.dart';
+
+// ---------------------------------------------------------------------------
+// Day selection for room availability
+// ---------------------------------------------------------------------------
+
+/// Compute today's [Day] in WIB (UTC+7).
+Day _todayWib() {
+  final now = DateTime.now();
+  final utc = now.isUtc ? now : now.toUtc();
+  final wib = utc.add(const Duration(hours: 7));
+  return Day.values[wib.weekday - 1];
+}
+
+class _SelectedRoomDayNotifier extends Notifier<Day> {
+  @override
+  Day build() => _todayWib();
+
+  /// Select a different day.
+  void selectDay(Day day) => state = day;
+}
+
+/// Currently selected day for room availability view.
+final selectedRoomDayProvider = NotifierProvider<_SelectedRoomDayNotifier, Day>(
+  _SelectedRoomDayNotifier.new,
+);
 
 // ---------------------------------------------------------------------------
 // Search
@@ -131,6 +156,31 @@ final roomByIdProvider = Provider.family<Room?, String>((ref, id) {
         if (r.id == id) return r;
       }
       return null;
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Day-specific availability
+// ---------------------------------------------------------------------------
+
+/// Count how many rooms are available on the selected day.
+final dayAvailableCountProvider = Provider<String>((ref) {
+  final matrix = ref.watch(occupancyMatrixProvider);
+  final roomsAsync = ref.watch(roomsProvider);
+  final selectedDay = ref.watch(selectedRoomDayProvider);
+
+  return roomsAsync.when(
+    loading: () => 'Memuat...',
+    error: (_, _) => 'Gagal memuat',
+    data: (rooms) {
+      var available = 0;
+      for (final room in rooms) {
+        if (!isRoomOccupiedOnDay(matrix, roomId: room.id, day: selectedDay)) {
+          available++;
+        }
+      }
+      return '$available dari ${rooms.length} ruangan kosong';
     },
   );
 });

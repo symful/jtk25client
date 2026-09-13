@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/cache/offline_cache.dart';
 import '../../../core/models/event.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/ui/refresh_helpers.dart';
@@ -22,7 +21,7 @@ Future<void> _onRefreshEvents(BuildContext context, WidgetRef ref) async {
   await refreshData(
     context,
     ref,
-    keys: [CacheKey.events],
+    endpoints: ['/api/v1/events'],
     refresh: () async {
       ref.invalidate(eventsProvider);
       await ref.read(eventsProvider.future);
@@ -31,13 +30,15 @@ Future<void> _onRefreshEvents(BuildContext context, WidgetRef ref) async {
 }
 
 /// Full-screen grouped events page.
+///
+/// Watches [eventsProvider] directly for loading/error/data
+/// (same pattern as schedule_ui.dart watches schedulesProvider).
 class EventsListPage extends ConsumerWidget {
   const EventsListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncGroups = ref.watch(groupedEventsProvider);
-    final fromCache = ref.watch(eventsFromCacheProvider);
+    final eventsAsync = ref.watch(eventsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -46,7 +47,7 @@ class EventsListPage extends ConsumerWidget {
           AppRefreshButton(onRefresh: () => _onRefreshEvents(context, ref)),
         ],
       ),
-      body: asyncGroups.when(
+      body: eventsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Text(
@@ -54,49 +55,39 @@ class EventsListPage extends ConsumerWidget {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
-        data: (groups) {
+        data: (_) {
+          // Grouped data comes from the sync derivation.
+          final groups = ref.watch(groupedEventsProvider);
           if (groups.isEmpty) {
             return const Center(child: Text('Belum ada acara'));
           }
-          return Column(
-            children: [
-              if (fromCache)
-                const MaterialBanner(
-                  content: Text('Menampilkan data tersimpan'),
-                  leading: Icon(Icons.info_outline),
-                  actions: [],
-                ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => _onRefreshEvents(context, ref),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: groups.fold<int>(
-                      0,
-                      (sum, g) => sum + g.items.length + 1,
-                    ),
-                    itemBuilder: (context, i) {
-                      int cursor = 0;
-                      for (final group in groups) {
-                        // Section header
-                        if (i == cursor) {
-                          return _SectionHeader(label: group.label);
-                        }
-                        cursor++;
-                        // Items
-                        for (int j = 0; j < group.items.length; j++) {
-                          if (i == cursor) {
-                            return _EventCard(event: group.items[j]);
-                          }
-                          cursor++;
-                        }
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ),
+          return RefreshIndicator(
+            onRefresh: () => _onRefreshEvents(context, ref),
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: groups.fold<int>(
+                0,
+                (sum, g) => sum + g.items.length + 1,
               ),
-            ],
+              itemBuilder: (context, i) {
+                int cursor = 0;
+                for (final group in groups) {
+                  // Section header
+                  if (i == cursor) {
+                    return _SectionHeader(label: group.label);
+                  }
+                  cursor++;
+                  // Items
+                  for (int j = 0; j < group.items.length; j++) {
+                    if (i == cursor) {
+                      return _EventCard(event: group.items[j]);
+                    }
+                    cursor++;
+                  }
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           );
         },
       ),

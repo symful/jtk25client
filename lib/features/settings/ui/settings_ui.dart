@@ -4,12 +4,9 @@
 /// All strings in Bahasa Indonesia.
 library;
 
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/notifications/notification_providers.dart';
 import '../../schedule/providers/schedule_providers.dart';
@@ -31,8 +28,8 @@ class SettingsPage extends ConsumerWidget {
           // Pemberitahuan section — single toggle.
           const _NotificationSection(),
           const Divider(),
-          // About section.
-          const _AboutSection(),
+          // Editor Data section.
+          const _EditorDataSection(),
         ],
       ),
     );
@@ -139,12 +136,14 @@ class _NotificationSection extends ConsumerWidget {
             data: (status) {
               if (status == 'Diblokir — atur di pengaturan HP') {
                 return ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('Atur di pengaturan HP'),
+                  leading: const Icon(Icons.notifications),
+                  title: const Text('Atur pemberitahuan'),
                   subtitle: const Text(
                     'Izin pemberitahuan diblokir oleh sistem',
                   ),
-                  onTap: () => _openAppSettings(),
+                  onTap: () {
+                    context.push('/pengaturan/notifikasi');
+                  },
                 );
               }
               return const SizedBox.shrink();
@@ -153,29 +152,15 @@ class _NotificationSection extends ConsumerWidget {
       ],
     );
   }
-
-  /// Open app settings on Android so user can unblock notifications.
-  Future<void> _openAppSettings() async {
-    if (kIsWeb) return;
-    try {
-      if (!kIsWeb && Platform.isAndroid) {
-        await launchUrl(
-          Uri.parse('package:com.jtk25.jadwalku'),
-          mode: LaunchMode.externalApplication,
-        );
-      }
-    } catch (e) {
-      debugPrint('Gagal membuka pengaturan aplikasi: $e');
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
-// About section
+// Editor Data section
 // ---------------------------------------------------------------------------
 
-class _AboutSection extends StatelessWidget {
-  const _AboutSection();
+/// Editor Data section — navigates to the unified editor.
+class _EditorDataSection extends StatelessWidget {
+  const _EditorDataSection();
 
   @override
   Widget build(BuildContext context) {
@@ -185,16 +170,18 @@ class _AboutSection extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(
-            'Tentang',
+            'Data',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         ListTile(
-          leading: const Icon(Icons.info_outline),
-          title: const Text('JTK25 Jadwalku'),
-          subtitle: const Text('Aplikasi jadwal kuliah JTK Poliban'),
+          leading: const Icon(Icons.edit),
+          title: const Text('Editor Data'),
+          subtitle: const Text('Edit jadwal, pengumuman, acara, dan lainnya'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/editor'),
         ),
       ],
     );

@@ -29,6 +29,33 @@ final selectedTypeProvider =
     );
 
 // ---------------------------------------------------------------------------
+// Selected editor file (for unified file list)
+// ---------------------------------------------------------------------------
+
+class _SelectedFileNotifier extends Notifier<EditorFile?> {
+  @override
+  EditorFile? build() => null;
+
+  void select(EditorFile file) {
+    state = file;
+    // Sync the legacy type provider.
+    ref.read(selectedTypeProvider.notifier).select(file.type);
+    // Auto-select class for schedules.
+    if (file.type == EditorDataType.schedule && file.classCode != null) {
+      ref.read(scheduleFormProvider.notifier).selectClass(file.classCode!);
+    }
+  }
+
+  void clear() => state = null;
+}
+
+/// Currently selected editor file (null = showing file list).
+final selectedFileProvider =
+    NotifierProvider<_SelectedFileNotifier, EditorFile?>(
+      _SelectedFileNotifier.new,
+    );
+
+// ---------------------------------------------------------------------------
 // Schedule form state
 // ---------------------------------------------------------------------------
 

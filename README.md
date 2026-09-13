@@ -108,3 +108,11 @@ File `.example` di repo menunjukkan struktur yang diharapkan. Nilai placeholder 
 ## Lisensi
 
 SSPL v1 — Lihat [LICENSE](LICENSE) untuk detail.
+
+## TODO
+
+- [ ] Room availability: finish/verify occupancy matrix accuracy
+- [ ] Scrap non-semester-3 data (sem 1, sem 5, sem 7) — keep only semester 3 (S3) data
+- [ ] Clean up unused code
+- [ ] Wire up unused screens/widgets
+- [ ] Dedup duplicate implementations

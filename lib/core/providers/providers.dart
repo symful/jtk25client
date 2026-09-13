@@ -51,18 +51,6 @@ final schemaVersionProvider = NotifierProvider<_SchemaVersionNotifier, int>(
   _SchemaVersionNotifier.new,
 );
 
-/// Simple boolean flag notifier (replaces removed StateProvider in Riverpod 3.x).
-class _BoolFlagNotifier extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  /// Reset the flag to false.
-  void reset() => state = false;
-
-  /// Set the flag to true.
-  void markLoaded() => state = true;
-}
-
 /// Meta response provider — fetches schema + dataVersion.
 final fetchMetaProvider = FutureProvider<MetaResponse>((ref) async {
   final api = ref.watch(apiClientProvider);
@@ -136,23 +124,14 @@ final penggantiProvider = FutureProvider<List<PenggantiEntry>>((ref) async {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.pengganti);
     if (cached is Map<String, dynamic>) {
-      final data = cached['data'] as List<dynamic>? ?? [];
-      return data
-          .map((e) => PenggantiEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return PenggantiEntry.listFromJson(cached['data']);
     }
     rethrow;
   }
 });
 
-/// Whether announcements are loaded from Hive cache (for soft banner).
-final announcementsFromCacheProvider =
-    NotifierProvider<_BoolFlagNotifier, bool>(_BoolFlagNotifier.new);
-
 /// Announcements provider.
 final announcementsProvider = FutureProvider<List<Announcement>>((ref) async {
-  // Reset cache flag on each fetch.
-  ref.read(announcementsFromCacheProvider.notifier).reset();
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.announcements();
@@ -169,25 +148,14 @@ final announcementsProvider = FutureProvider<List<Announcement>>((ref) async {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.announcements);
     if (cached is Map<String, dynamic>) {
-      ref.read(announcementsFromCacheProvider.notifier).markLoaded();
-      final data = cached['data'] as List<dynamic>? ?? [];
-      return data
-          .map((e) => Announcement.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return Announcement.listFromJson(cached['data']);
     }
     rethrow;
   }
 });
 
-/// Whether events are loaded from Hive cache (for soft banner).
-final eventsFromCacheProvider = NotifierProvider<_BoolFlagNotifier, bool>(
-  _BoolFlagNotifier.new,
-);
-
 /// Events provider.
 final eventsProvider = FutureProvider<List<JtkEvent>>((ref) async {
-  // Reset cache flag on each fetch.
-  ref.read(eventsFromCacheProvider.notifier).reset();
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.events();
@@ -204,11 +172,7 @@ final eventsProvider = FutureProvider<List<JtkEvent>>((ref) async {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.events);
     if (cached is Map<String, dynamic>) {
-      ref.read(eventsFromCacheProvider.notifier).markLoaded();
-      final data = cached['data'] as List<dynamic>? ?? [];
-      return data
-          .map((e) => JtkEvent.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return JtkEvent.listFromJson(cached['data']);
     }
     rethrow;
   }
@@ -232,10 +196,7 @@ final dosenProvider = FutureProvider<List<Dosen>>((ref) async {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.dosen);
     if (cached is Map<String, dynamic>) {
-      final data = cached['data'] as List<dynamic>? ?? [];
-      return data
-          .map((e) => Dosen.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return Dosen.listFromJson(cached['data']);
     }
     rethrow;
   }
@@ -259,8 +220,7 @@ final roomsProvider = FutureProvider<List<Room>>((ref) async {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.rooms);
     if (cached is Map<String, dynamic>) {
-      final data = cached['data'] as List<dynamic>? ?? [];
-      return data.map((e) => Room.fromJson(e as Map<String, dynamic>)).toList();
+      return Room.listFromJson(cached['data']);
     }
     rethrow;
   }

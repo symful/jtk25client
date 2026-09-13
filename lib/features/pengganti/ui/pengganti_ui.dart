@@ -18,7 +18,7 @@ class PenggantiPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classCode = ref.watch(selectedClassProvider);
+    final classCode = ref.watch(viewedClassProvider);
     final entries = ref.watch(classPenggantiProvider(classCode));
 
     return Scaffold(

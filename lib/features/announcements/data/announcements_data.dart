@@ -22,37 +22,39 @@ class AnnouncementsSeen {
     _box ??= await _h.openBox<String>(_boxName);
   }
 
-  Box<String> get _b {
-    if (_box == null) {
-      throw StateError('AnnouncementsSeen not initialized. Call init() first.');
-    }
-    return _box!;
+  /// All IDs the user has already seen.
+  Set<String> get seenIds {
+    if (_box == null) return const {};
+    return _box!.keys.cast<String>().toSet();
   }
 
-  /// All IDs the user has already seen.
-  Set<String> get seenIds => _b.keys.cast<String>().toSet();
-
   /// Whether [id] has been seen.
-  bool hasSeen(String id) => _b.containsKey(id);
+  bool hasSeen(String id) {
+    if (_box == null) return false;
+    return _box!.containsKey(id);
+  }
 
   /// Mark a single ID as seen.
   Future<void> markSeen(String id) async {
-    await _b.put(id, DateTime.now().toUtc().toIso8601String());
+    if (_box == null) return;
+    await _box!.put(id, DateTime.now().toUtc().toIso8601String());
   }
 
   /// Mark multiple IDs as seen.
   Future<void> markAllSeen(Iterable<String> ids) async {
+    if (_box == null) return;
     final now = DateTime.now().toUtc().toIso8601String();
     for (final id in ids) {
-      await _b.put(id, now);
+      await _box!.put(id, now);
     }
   }
 
   /// Whether there are any unseen IDs in [allIds].
   bool hasUnseen(Iterable<String> allIds) {
-    return allIds.any((id) => !_b.containsKey(id));
+    if (_box == null) return false;
+    return allIds.any((id) => !_box!.containsKey(id));
   }
 
   /// Clear all seen records.
-  Future<void> clearAll() async => _b.clear();
+  Future<void> clearAll() async => _box?.clear();
 }

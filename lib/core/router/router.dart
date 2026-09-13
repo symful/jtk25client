@@ -18,7 +18,7 @@ import '../../features/rooms/rooms.dart';
 import '../../features/schedule/schedule.dart';
 import '../../features/settings/settings.dart';
 import '../../features/settings/ui/notification_permission_screen.dart';
-import '../shell/editor_placeholder.dart';
+import '../../features/editor/editor.dart';
 import '../shell/not_found_page.dart';
 import '../shell/shell.dart';
 
@@ -69,37 +69,39 @@ GoRouter createRouter() {
                       ),
                     ],
                   ),
-                  // Room routes.
-                  GoRoute(
-                    path: 'ruangan',
-                    builder: (context, state) => const RoomsListPage(),
-                    routes: [
-                      GoRoute(
-                        path: 'matriks',
-                        builder: (context, state) =>
-                            const AvailabilityMatrixPage(),
-                      ),
-                      GoRoute(
-                        path: ':id',
-                        builder: (context, state) => RoomDetailPage(
-                          roomId: Uri.decodeComponent(
-                            state.pathParameters['id']!,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Editor placeholder (T16).
+                  // Editor (T16).
                   GoRoute(
                     path: 'editor',
-                    builder: (context, state) => const EditorPlaceholderPage(),
+                    builder: (context, state) => const EditorPage(),
                   ),
                 ],
               ),
             ],
           ),
 
-          // Branch 1: Pengumuman.
+          // Branch 1: Ruangan.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/ruangan',
+                builder: (context, state) => const RoomsListPage(),
+                routes: [
+                  GoRoute(
+                    path: 'matriks',
+                    builder: (context, state) => const AvailabilityMatrixPage(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => RoomDetailPage(
+                      roomId: Uri.decodeComponent(state.pathParameters['id']!),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 2: Pengumuman.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -109,7 +111,7 @@ GoRouter createRouter() {
             ],
           ),
 
-          // Branch 2: Acara.
+          // Branch 3: Acara.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -119,7 +121,7 @@ GoRouter createRouter() {
             ],
           ),
 
-          // Branch 3: Pengaturan.
+          // Branch 4: Pengaturan.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -142,7 +144,7 @@ GoRouter createRouter() {
 }
 
 // ---------------------------------------------------------------------------
-// Schedule with class parameter — sets selectedClassProvider on mount
+// Schedule with class parameter — sets viewedClassProvider on mount
 // ---------------------------------------------------------------------------
 
 class _ScheduleWithParam extends ConsumerStatefulWidget {
@@ -160,7 +162,7 @@ class _ScheduleWithParamState extends ConsumerState<_ScheduleWithParam> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(selectedClassProvider.notifier).select(widget.classCode);
+      ref.read(viewedClassProvider.notifier).select(widget.classCode);
     });
   }
 
