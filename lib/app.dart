@@ -3,8 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import 'features/announcements/announcements.dart';
 import 'features/events/events.dart';
+import 'features/lecturers/lecturers.dart';
 import 'features/pengganti/pengganti.dart';
+import 'features/rooms/rooms.dart';
 import 'features/schedule/schedule.dart';
+import 'features/settings/settings.dart';
+import 'main.dart' show scaffoldMessengerKey;
 
 /// Root widget for the JTK25 client application.
 class Jtk25App extends StatelessWidget {
@@ -15,6 +19,7 @@ class Jtk25App extends StatelessWidget {
     return MaterialApp.router(
       title: 'JTK25 Jadwal',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
@@ -25,7 +30,7 @@ class Jtk25App extends StatelessWidget {
   }
 }
 
-/// Core router — schedule + pengganti + announcements + events.
+/// Core router — schedule + pengganti + announcements + events + dosen + rooms.
 final _router = GoRouter(
   initialLocation: '/jadwal',
   routes: [
@@ -42,6 +47,36 @@ final _router = GoRouter(
     GoRoute(
       path: '/kegiatan',
       builder: (context, state) => const EventsListPage(),
+    ),
+    // Dosen routes.
+    GoRoute(
+      path: '/dosen',
+      builder: (context, state) => const LecturersListPage(),
+    ),
+    GoRoute(
+      path: '/dosen/:code',
+      builder: (context, state) =>
+          LecturerDetailPage(code: state.pathParameters['code']!),
+    ),
+    // Rooms routes.
+    GoRoute(
+      path: '/ruangan',
+      builder: (context, state) => const RoomsListPage(),
+    ),
+    GoRoute(
+      path: '/ruangan/matriks',
+      builder: (context, state) => const AvailabilityMatrixPage(),
+    ),
+    GoRoute(
+      path: '/ruangan/:id',
+      builder: (context, state) => RoomDetailPage(
+        roomId: Uri.decodeComponent(state.pathParameters['id']!),
+      ),
+    ),
+    // Settings route.
+    GoRoute(
+      path: '/pengaturan',
+      builder: (context, state) => const SettingsPage(),
     ),
   ],
 );
