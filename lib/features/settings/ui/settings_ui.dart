@@ -30,6 +30,9 @@ class SettingsPage extends ConsumerWidget {
           const Divider(),
           // Pemberitahuan section — single toggle.
           const _NotificationSection(),
+          const Divider(),
+          // About section.
+          const _AboutSection(),
         ],
       ),
     );
@@ -164,5 +167,36 @@ class _NotificationSection extends ConsumerWidget {
     } catch (e) {
       debugPrint('Gagal membuka pengaturan aplikasi: $e');
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// About section
+// ---------------------------------------------------------------------------
+
+class _AboutSection extends StatelessWidget {
+  const _AboutSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            'Tentang',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: const Text('JTK25 Jadwalku'),
+          subtitle: const Text('Aplikasi jadwal kuliah JTK Poliban'),
+        ),
+      ],
+    );
   }
 }

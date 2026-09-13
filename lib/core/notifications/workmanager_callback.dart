@@ -12,7 +12,6 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -20,6 +19,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:workmanager/workmanager.dart';
 
 import '../api/jtk_api.dart';
+import '../utils/debug_log.dart';
 import 'notification_service.dart';
 import '../../features/settings/data/settings_data.dart';
 
@@ -33,7 +33,7 @@ const String kDataPollTask = 'jtk25DataPoll';
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    debugPrint('WorkManager task started: $task');
+    debugLog('[WorkManager] task started: $task');
 
     try {
       // Initialize Hive in the background isolate.
@@ -61,16 +61,16 @@ void callbackDispatcher() {
           'Data jadwal telah diperbarui.',
         );
         await box.put(_kLastDataVersionKey, meta.dataVersion);
-        debugPrint(
-          'WorkManager: data updated $lastVersion → ${meta.dataVersion}',
+        debugLog(
+          '[WorkManager] data updated $lastVersion → ${meta.dataVersion}',
         );
       } else {
-        debugPrint('WorkManager: no data change (${meta.dataVersion})');
+        debugLog('[WorkManager] no data change (${meta.dataVersion})');
       }
 
       return true; // Task succeeded.
     } catch (e) {
-      debugPrint('WorkManager task failed: $e');
+      debugLog('[WorkManager] task failed: $e');
       return false; // Will retry with backoff.
     }
   });

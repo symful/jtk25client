@@ -2,14 +2,20 @@
 ///
 /// Uses Notifier + NotifierProvider pattern (Riverpod 3.x).
 /// Persisted notification preference in Hive settings box.
+///
+/// Auto topic re-subscribe: when the selected class changes and
+/// notifications are enabled, FCM topics are updated silently via
+/// ref.listen inside the notification enabled notifier.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
 
+import '../utils/debug_log.dart';
 import '../notifications/fcm_service.dart';
 import '../notifications/notification_service.dart';
 import '../../features/settings/data/settings_data.dart';
+import '../../features/schedule/providers/schedule_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Notification enabled toggle (Hive-persisted)
@@ -22,20 +28,43 @@ class _NotificationEnabledNotifier extends Notifier<bool> {
   @override
   bool build() {
     final box = Hive.box(kSettingsBoxName);
-    return box.get(_kNotificationsEnabledKey) as bool? ?? false;
+    final enabled = box.get(_kNotificationsEnabledKey) as bool? ?? false;
+
+    // Auto re-subscribe FCM topic when the selected class changes.
+    // ref.listen fires the callback on every change — silent, no UI jargon.
+    ref.listen<String>(selectedClassProvider, (previous, next) {
+      if (state && next.isNotEmpty) {
+        debugLog('[FCM] selectedClass changed: $previous → $next');
+        FcmService.instance.subscribeToClassTopic(next);
+      }
+    });
+
+    return enabled;
   }
 
   /// Toggle notifications on/off and persist the choice.
+  ///
+  /// When enabling: requests permission, subscribes to class topic,
+  /// starts polling.
+  /// When disabling: unsubscribes from topics, stops polling.
   void toggle(bool value) {
     state = value;
     Hive.box(kSettingsBoxName).put(_kNotificationsEnabledKey, value);
+    debugLog('[FCM] notifications enabled: $value');
 
     final service = NotificationService.instance;
     if (value) {
       service.requestPermission().then((granted) {
         if (granted) {
           service.startPolling();
+          // Subscribe to the currently selected class topic.
+          final classCode = ref.read(selectedClassProvider);
+          if (classCode.isNotEmpty) {
+            debugLog('[FCM] subscribing on enable: $classCode');
+            FcmService.instance.subscribeToClassTopic(classCode);
+          }
         } else {
+          debugLog('[FCM] permission denied — disabling toggle');
           // Permission denied — turn off the toggle.
           state = false;
           Hive.box(kSettingsBoxName).put(_kNotificationsEnabledKey, false);
@@ -43,6 +72,9 @@ class _NotificationEnabledNotifier extends Notifier<bool> {
       });
     } else {
       service.stopPolling();
+      // Unsubscribe from all topics when disabling.
+      debugLog('[FCM] disabling — unsubscribing all topics');
+      FcmService.instance.unsubscribeFromAllTopics();
     }
   }
 }
@@ -61,8 +93,8 @@ final notificationEnabledProvider =
 ///
 /// Returns one of:
 /// - "Aktif" — notifications enabled and permission granted
-/// - "Nonaktif" — notifications disabled by user
-/// - "Nonaktif (izin ditolak)" — notifications enabled but permission denied
+/// - "Belum aktif" — notifications disabled by user
+/// - "Diblokir — atur di pengaturan HP" — permission denied by OS
 final notificationStatusProvider = FutureProvider<String>((ref) async {
   final enabled = ref.watch(notificationEnabledProvider);
   if (!enabled) return 'Belum aktif';

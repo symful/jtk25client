@@ -20,6 +20,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../api/jtk_api.dart';
 import '../models/schedule.dart';
+import '../utils/debug_log.dart';
 import '../utils/time_slot.dart';
 import '../../features/settings/data/settings_data.dart';
 import '_web_helper_stub.dart' if (dart.library.js_interop) '_web_helper.dart';
@@ -180,7 +181,7 @@ class NotificationService {
       }
       return false;
     } catch (e) {
-      debugPrint('NotificationService: poll failed: $e');
+      debugLog('[NotifService] poll failed: $e');
       return false;
     }
   }

@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     hide Day;
 import 'package:hive_ce/hive.dart';
 
+import '../utils/debug_log.dart';
 import 'notification_service.dart';
 import 'web_push_config.dart';
 import '../../features/settings/data/settings_data.dart';
@@ -25,7 +26,7 @@ const String _kFcmTopicsKey = 'fcm_topics';
 /// a background isolate.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('FCM background message: ${message.messageId}');
+  debugLog('[FCM] background message: ${message.messageId}');
 }
 
 /// Firebase Cloud Messaging service for JTK25.
@@ -38,6 +39,13 @@ class FcmService {
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   bool _initialized = false;
+
+  /// In-memory cache of the currently subscribed class code.
+  ///
+  /// Used for idempotency: [subscribeToClassTopic] is a no-op when the
+  /// requested [classCode] matches this value, preventing unsub→sub churn
+  /// on every UI rebuild.
+  String? _currentSubscribedClass;
 
   /// Initialize FCM for the current platform.
   ///
@@ -59,7 +67,7 @@ class FcmService {
         await _initNative(localNotifications: localNotifications);
       }
     } catch (e) {
-      debugPrint('FcmService init failed: $e');
+      debugLog('[FCM] init failed: $e');
     }
   }
 
@@ -67,23 +75,23 @@ class FcmService {
     FlutterLocalNotificationsPlugin? localNotifications,
   }) async {
     if (kVapidKey.isEmpty) {
-      debugPrint('FcmService: VAPID key not configured, skipping web FCM');
+      debugLog('[FCM] VAPID key not configured, skipping web FCM');
       return;
     }
 
     final token = await _messaging.getToken(vapidKey: kVapidKey);
     if (token != null) {
-      debugPrint('FCM web token: ${token.substring(0, 20)}...');
+      debugLog('[FCM] web token: ${token.substring(0, 20)}...');
       await _persistToken(token);
     }
 
     _messaging.onTokenRefresh.listen((newToken) {
-      debugPrint('FCM web token refreshed');
+      debugLog('[FCM] web token refreshed');
       _persistToken(newToken);
     });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('FCM foreground web message: ${message.notification?.title}');
+      debugLog('[FCM] foreground web message: ${message.notification?.title}');
       _handleForegroundMessage(message, localNotifications: localNotifications);
     });
   }
@@ -93,24 +101,24 @@ class FcmService {
   }) async {
     final token = await _messaging.getToken();
     if (token != null) {
-      debugPrint('FCM native token: ${token.substring(0, 20)}...');
+      debugLog('[FCM] native token: ${token.substring(0, 20)}...');
       await _persistToken(token);
     }
 
     _messaging.onTokenRefresh.listen((newToken) {
-      debugPrint('FCM native token refreshed');
+      debugLog('[FCM] native token refreshed');
       _persistToken(newToken);
     });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint(
-        'FCM foreground native message: ${message.notification?.title}',
+      debugLog(
+        '[FCM] foreground native message: ${message.notification?.title}',
       );
       _handleForegroundMessage(message, localNotifications: localNotifications);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('FCM message opened app: ${message.notification?.title}');
+      debugLog('[FCM] message opened app: ${message.notification?.title}');
     });
   }
 
@@ -152,10 +160,10 @@ class FcmService {
   Future<void> subscribeToTopic(String topic) async {
     try {
       await _messaging.subscribeToTopic(topic);
-      debugPrint('FCM subscribed to topic: $topic');
+      debugLog('[FCM] subscribed to topic: $topic');
       await _recordTopicSubscription(topic);
     } catch (e) {
-      debugPrint('FCM subscribeToTopic failed for $topic: $e');
+      debugLog('[FCM] subscribeToTopic failed for $topic: $e');
     }
   }
 
@@ -163,18 +171,50 @@ class FcmService {
   Future<void> unsubscribeFromTopic(String topic) async {
     try {
       await _messaging.unsubscribeFromTopic(topic);
-      debugPrint('FCM unsubscribed from topic: $topic');
+      debugLog('[FCM] unsubscribed from topic: $topic');
       await _removeTopicSubscription(topic);
     } catch (e) {
-      debugPrint('FCM unsubscribeFromTopic failed for $topic: $e');
+      debugLog('[FCM] unsubscribeFromTopic failed for $topic: $e');
     }
+  }
+
+  /// Unsubscribe from all currently subscribed FCM topics.
+  ///
+  /// Snapshots the topic list before iterating to avoid concurrent
+  /// modification of the underlying Hive CastList.
+  Future<void> unsubscribeFromAllTopics() async {
+    // Snapshot to avoid CastList concurrent-modification during iteration.
+    final previousTopics = _snapshotTopics();
+    debugLog('[FCM] unsubscribing from ${previousTopics.length} topics');
+    for (final oldTopic in previousTopics) {
+      await unsubscribeFromTopic(oldTopic);
+    }
+    _currentSubscribedClass = null;
   }
 
   /// Subscribe to the topic for the selected class.
   ///
-  /// Unsubscribes from previously subscribed class topics first.
+  /// **Idempotent**: if [classCode] is the same as the currently subscribed
+  /// class, this is a no-op — prevents unsub→sub churn on UI rebuilds.
+  ///
+  /// Unsubscribes from previously subscribed class topics first,
+  /// then subscribes to the new class topic.
   Future<void> subscribeToClassTopic(String classCode) async {
-    final previousTopics = _getSubscribedTopics();
+    if (classCode.isEmpty) {
+      debugLog('[FCM] subscribeToClassTopic: empty classCode, skipping');
+      return;
+    }
+
+    // Idempotency: no-op if already subscribed to this class.
+    if (_currentSubscribedClass == classCode) {
+      debugLog('[FCM] already subscribed to class $classCode, no-op');
+      return;
+    }
+
+    debugLog('[FCM] subscribeToClassTopic: $classCode');
+
+    // Snapshot before iterating to avoid CastList concurrent-modification.
+    final previousTopics = _snapshotTopics();
 
     for (final oldTopic in previousTopics) {
       await unsubscribeFromTopic(oldTopic);
@@ -182,20 +222,27 @@ class FcmService {
 
     final topic = 'jtk25_$classCode';
     await subscribeToTopic(topic);
+    _currentSubscribedClass = classCode;
   }
 
-  List<String> _getSubscribedTopics() {
+  /// Return a safe [List<String>] snapshot of subscribed topics from Hive.
+  ///
+  /// The Hive `CastList` returned by `box.get()` is a live view — iterating
+  /// it while mutating the underlying box causes
+  /// `Concurrent modification during iteration`. Calling `.toList()` creates
+  /// a detached copy that is safe to iterate.
+  List<String> _snapshotTopics() {
     final box = Hive.box(kSettingsBoxName);
     final topics = box.get(_kFcmTopicsKey);
     if (topics is List) {
-      return topics.cast<String>();
+      return topics.cast<String>().toList();
     }
     return [];
   }
 
   Future<void> _recordTopicSubscription(String topic) async {
     final box = Hive.box(kSettingsBoxName);
-    final current = _getSubscribedTopics();
+    final current = _snapshotTopics();
     if (!current.contains(topic)) {
       current.add(topic);
       await box.put(_kFcmTopicsKey, current);
@@ -204,7 +251,7 @@ class FcmService {
 
   Future<void> _removeTopicSubscription(String topic) async {
     final box = Hive.box(kSettingsBoxName);
-    final current = _getSubscribedTopics();
+    final current = _snapshotTopics();
     current.remove(topic);
     await box.put(_kFcmTopicsKey, current);
   }
@@ -223,7 +270,7 @@ class FcmService {
       if (token != null) await _persistToken(token);
       return token;
     } catch (e) {
-      debugPrint('FcmService getToken failed: $e');
+      debugLog('[FCM] getToken failed: $e');
       return null;
     }
   }
@@ -249,6 +296,7 @@ class FcmService {
           return 'Diblokir permanen — atur di pengaturan HP';
       }
     } catch (e) {
+      debugLog('[FCM] pushStatusText failed: $e');
       return 'Status tidak diketahui';
     }
   }
