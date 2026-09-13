@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -27,13 +30,17 @@ void main() async {
   tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
 
   // Register WorkManager callbacks for Android background polling.
-  Workmanager().initialize(callbackDispatcher);
-  Workmanager().registerPeriodicTask(
-    kDataPollTask,
-    kDataPollTask,
-    frequency: const Duration(minutes: 15),
-    constraints: Constraints(networkType: NetworkType.connected),
-  );
+  // WorkManager is Android-only; Windows/Web use Timer-based polling
+  // via NotificationService.startPolling().
+  if (!kIsWeb && Platform.isAndroid) {
+    Workmanager().initialize(callbackDispatcher);
+    Workmanager().registerPeriodicTask(
+      kDataPollTask,
+      kDataPollTask,
+      frequency: const Duration(minutes: 15),
+      constraints: Constraints(networkType: NetworkType.connected),
+    );
+  }
 
   // Initialize notification service and wire up web Snackbar fallback.
   NotificationService.scaffoldMessengerKey = scaffoldMessengerKey;
