@@ -45,10 +45,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // App bar title.
-      expect(find.text('Notifikasi'), findsOneWidget);
+      expect(find.text('Pemberitahuan'), findsOneWidget);
 
       // In test env, permission check fails → shows CTA (notDetermined state).
-      expect(find.text('Aktifkan Notifikasi'), findsWidgets);
+      expect(find.text('Aktifkan Pemberitahuan'), findsWidgets);
     });
 
     testWidgets('shows CTA button in notDetermined state', (
@@ -59,7 +59,7 @@ void main() {
 
       // The big CTA button text.
       expect(
-        find.widgetWithText(FilledButton, 'Aktifkan Notifikasi'),
+        find.widgetWithText(FilledButton, 'Aktifkan Pemberitahuan'),
         findsOneWidget,
       );
     });

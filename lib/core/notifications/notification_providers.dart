@@ -65,11 +65,11 @@ final notificationEnabledProvider =
 /// - "Nonaktif (izin ditolak)" — notifications enabled but permission denied
 final notificationStatusProvider = FutureProvider<String>((ref) async {
   final enabled = ref.watch(notificationEnabledProvider);
-  if (!enabled) return 'Nonaktif';
+  if (!enabled) return 'Belum aktif';
 
   final service = NotificationService.instance;
   final isEnabled = await service.isEnabled();
-  return isEnabled ? 'Aktif' : 'Nonaktif (izin ditolak)';
+  return isEnabled ? 'Aktif' : 'Diblokir — atur di pengaturan HP';
 });
 
 // ---------------------------------------------------------------------------

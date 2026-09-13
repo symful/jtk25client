@@ -410,6 +410,6 @@ class NotificationService {
   /// Human-readable status string in Indonesian.
   Future<String> statusText() async {
     final enabled = await isEnabled();
-    return enabled ? 'Aktif' : 'Nonaktif (izin ditolak)';
+    return enabled ? 'Aktif' : 'Diblokir — atur di pengaturan HP';
   }
 }

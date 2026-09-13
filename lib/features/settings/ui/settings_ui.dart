@@ -27,10 +27,10 @@ class SettingsPage extends ConsumerWidget {
           // Class selection section.
           const _ClassSelectionSection(),
           const Divider(),
-          // Notification section.
+          // Pemberitahuan section.
           const _NotificationSection(),
           const Divider(),
-          // FCM push status section.
+          // Info pemberitahuan section.
           const _FcmPushSection(),
         ],
       ),
@@ -100,14 +100,14 @@ class _NotificationSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(
-            'Notifikasi',
+            'Pemberitahuan',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         SwitchListTile(
-          title: const Text('Aktifkan Notifikasi'),
+          title: const Text('Aktifkan Pemberitahuan'),
           subtitle: statusAsync.when(
             loading: () => const Text('Memuat...'),
             error: (_, _) => const Text('Gagal memuat status'),
@@ -121,7 +121,7 @@ class _NotificationSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'Aktifkan notifikasi untuk pembaruan jadwal dan pengingat kelas.',
+            'Dapatkan kabar jadwal pengganti & pengumuman langsung ke HP-mu.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -136,7 +136,7 @@ class _NotificationSection extends ConsumerWidget {
               context.push('/pengaturan/notifikasi');
             },
             icon: const Icon(Icons.notifications_active),
-            label: const Text('Atur'),
+            label: const Text('Lihat Detail'),
           ),
         ),
         const SizedBox(height: 16),
@@ -146,7 +146,7 @@ class _NotificationSection extends ConsumerWidget {
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
             data: (status) {
-              if (status == 'Nonaktif (izin ditolak)') {
+              if (status == 'Diblokir — atur di pengaturan HP') {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: OutlinedButton.icon(
@@ -157,7 +157,7 @@ class _NotificationSection extends ConsumerWidget {
                       ref.invalidate(notificationStatusProvider);
                     },
                     icon: const Icon(Icons.notifications_active),
-                    label: const Text('Minta Izin'),
+                    label: const Text('Aktifkan Pemberitahuan'),
                   ),
                 );
               }
@@ -170,7 +170,7 @@ class _NotificationSection extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// FCM push status section
+// Info pemberitahuan section
 // ---------------------------------------------------------------------------
 
 class _FcmPushSection extends ConsumerWidget {
@@ -186,7 +186,7 @@ class _FcmPushSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(
-            'Push Notifikasi',
+            'Info Kelas',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -194,7 +194,7 @@ class _FcmPushSection extends ConsumerWidget {
         ),
         ListTile(
           leading: const Icon(Icons.cloud_queue),
-          title: const Text('Status Push'),
+          title: const Text('Status pengiriman'),
           subtitle: fcmStatusAsync.when(
             loading: () => const Text('Memuat...'),
             error: (e, _) => const Text('Gagal memuat status'),
@@ -205,7 +205,7 @@ class _FcmPushSection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Untuk mengaktifkan push web, buat sertifikat Web Push di Firebase Console \u2192 Project Settings \u2192 Cloud Messaging.',
+              'Fitur ini belum aktif di browser. Gunakan Chrome atau Firefox untuk menerima pemberitahuan.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -222,8 +222,8 @@ class _FcmPushSection extends ConsumerWidget {
                 ref.invalidate(fcmStatusProvider);
               }
             },
-            icon: const Icon(Icons.topic),
-            label: const Text('Perbarui Langganan Topik'),
+            icon: const Icon(Icons.info_outline),
+            label: const Text('Perbarui info kelas'),
           ),
         ),
         const SizedBox(height: 16),

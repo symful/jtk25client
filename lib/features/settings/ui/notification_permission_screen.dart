@@ -153,12 +153,10 @@ class _NotificationPermissionScreenState
       return;
     }
 
-    setState(() => _topicStatus = 'Menyubscribe topik...');
+    setState(() => _topicStatus = 'Menghubungkan info kelas...');
     await FcmService.instance.subscribeToClassTopic(selectedClass);
     if (!mounted) return;
-    setState(
-      () => _topicStatus = 'Topik kelas $selectedClass berhasil dilanggani',
-    );
+    setState(() => _topicStatus = 'Info kelas $selectedClass sudah aktif');
   }
 
   Future<void> _openAppSettings() async {
@@ -183,7 +181,7 @@ class _NotificationPermissionScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifikasi'),
+        title: const Text('Pemberitahuan'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -223,7 +221,7 @@ class _NotificationPermissionScreenState
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            'Memeriksa status notifikasi...',
+            'Memeriksa status pemberitahuan...',
             style: theme.textTheme.bodyLarge,
           ),
         ],
@@ -242,7 +240,7 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 24),
         Text(
-          'Notifikasi Tidak Didukung',
+          'Pemberitahuan Tidak Didukung',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -250,9 +248,9 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 12),
         Text(
-          'Browser Anda tidak mendukung notifikasi push. '
-          'Gunakan browser modern seperti Chrome atau Firefox untuk '
-          'mengaktifkan notifikasi.',
+          'Browser Anda belum mendukung pemberitahuan. '
+          'Gunakan Chrome atau Firefox untuk '
+          'mengaktifkannya.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -282,7 +280,7 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 32),
         Text(
-          'Aktifkan Notifikasi',
+          'Aktifkan Pemberitahuan',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -290,7 +288,7 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 16),
         Text(
-          'Dapatkan notifikasi untuk:',
+          'Dapatkan kabar tentang:',
           style: theme.textTheme.bodyLarge?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -334,7 +332,7 @@ class _NotificationPermissionScreenState
                     ),
                   )
                 : const Text(
-                    'Aktifkan Notifikasi',
+                    'Aktifkan Pemberitahuan',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
@@ -363,7 +361,7 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 24),
         Text(
-          'Notifikasi Aktif',
+          'Pemberitahuan Aktif',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: Colors.green,
@@ -372,8 +370,8 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 12),
         Text(
-          'Notifikasi sudah aktif. Anda akan menerima '
-          'pembaruan jadwal dan pengingat kelas.',
+          'Pemberitahuan sudah aktif. Kamu akan terima '
+          'pembaruan jadwal & pengingat kelas.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -387,7 +385,7 @@ class _NotificationPermissionScreenState
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Icon(Icons.topic_rounded, color: kBrandBlue),
+                  const Icon(Icons.info_outline, color: kBrandBlue),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -404,7 +402,7 @@ class _NotificationPermissionScreenState
         OutlinedButton.icon(
           onPressed: _subscribeToClassTopic,
           icon: const Icon(Icons.refresh),
-          label: const Text('Perbarui Langganan Topik'),
+          label: const Text('Perbarui info kelas'),
         ),
       ],
     );
@@ -421,7 +419,7 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 24),
         Text(
-          'Izin Ditolak',
+          'Belum Diizinkan',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.error,
@@ -430,8 +428,8 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 12),
         Text(
-          'Izin notifikasi ditolak. Tanpa izin, Anda tidak akan '
-          'menerima pembaruan jadwal dan pengingat kelas.',
+          'Kamu belum mengizinkan pemberitahuan. Tanpa itu, jadwal pengganti '
+          '& pengumuman tidak bisa dikirim.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -440,8 +438,8 @@ class _NotificationPermissionScreenState
         const SizedBox(height: 24),
         if (!kIsWeb)
           Text(
-            'Untuk mengaktifkan notifikasi, buka Pengaturan Aplikasi '
-            'dan aktifkan izin notifikasi.',
+            'Buka Pengaturan di HP-mu, lalu cari aplikasi ini '
+            'dan aktifkan pemberitahuan.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -481,7 +479,7 @@ class _NotificationPermissionScreenState
           OutlinedButton.icon(
             onPressed: _openAppSettings,
             icon: const Icon(Icons.settings),
-            label: const Text('Buka Pengaturan Aplikasi'),
+            label: const Text('Buka Pengaturan di HP'),
           ),
         ],
       ],
@@ -495,7 +493,7 @@ class _NotificationPermissionScreenState
         Icon(Icons.block_rounded, size: 80, color: theme.colorScheme.error),
         const SizedBox(height: 24),
         Text(
-          'Izin Ditolak Permanen',
+          'Pemberitahuan Diblokir',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.error,
@@ -504,8 +502,8 @@ class _NotificationPermissionScreenState
         ),
         const SizedBox(height: 12),
         Text(
-          'Izin notifikasi ditolak permanen oleh sistem. '
-          'Untuk mengaktifkan notifikasi:',
+          'Pemberitahuan diblokir oleh sistem. '
+          'Untuk mengaktifkannya:',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -516,15 +514,15 @@ class _NotificationPermissionScreenState
           _buildInstructionStep(
             theme,
             step: '1',
-            text: 'Buka Pengaturan Aplikasi',
+            text: 'Buka Pengaturan di HP',
           ),
           const SizedBox(height: 8),
-          _buildInstructionStep(theme, step: '2', text: 'Pilih Notifikasi'),
+          _buildInstructionStep(theme, step: '2', text: 'Cari pemberitahuan'),
           const SizedBox(height: 8),
           _buildInstructionStep(
             theme,
             step: '3',
-            text: 'Aktifkan izin notifikasi',
+            text: 'Aktifkan pemberitahuan',
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -540,14 +538,14 @@ class _NotificationPermissionScreenState
                 ),
               ),
               child: const Text(
-                'Buka Pengaturan Aplikasi',
+                'Buka Pengaturan di HP',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),
         ] else
           Text(
-            'Muat ulang halaman dan berikan izin saat diminta.',
+            'Muat ulang halaman ini, lalu izinkan saat diminta.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

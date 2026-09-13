@@ -148,7 +148,7 @@ class FcmService {
   /// Subscribe to an FCM topic.
   ///
   /// Topics are used for class-specific data-update notifications.
-  /// The topic name is derived from the class code (e.g. "jtk25_D3-3A").
+  /// The topic name is derived from the class code (e.g. "jtk25_D3-2A").
   Future<void> subscribeToTopic(String topic) async {
     try {
       await _messaging.subscribeToTopic(topic);
@@ -233,23 +233,23 @@ class FcmService {
 
   /// Get human-readable push status in Bahasa Indonesia.
   Future<String> pushStatusText() async {
-    if (!isSupported) return 'Push web belum dikonfigurasi';
+    if (!isSupported) return 'Belum aktif di browser ini';
     try {
       final settings = await _messaging.getNotificationSettings();
       switch (settings.authorizationStatus) {
         case AuthorizationStatus.authorized:
-          return 'Push aktif';
+          return 'Aktif';
         case AuthorizationStatus.provisional:
-          return 'Push aktif (provisional)';
+          return 'Aktif';
         case AuthorizationStatus.denied:
-          return 'Push ditolak oleh sistem';
+          return 'Diblokir oleh sistem';
         case AuthorizationStatus.notDetermined:
-          return 'Push belum ditentukan';
+          return 'Belum diatur';
         case AuthorizationStatus.deniedPermanently:
-          return 'Push ditolak permanen';
+          return 'Diblokir permanen — atur di pengaturan HP';
       }
     } catch (e) {
-      return 'Status push tidak diketahui';
+      return 'Status tidak diketahui';
     }
   }
 }
