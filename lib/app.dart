@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/announcements/announcements.dart';
+import 'features/events/events.dart';
+
 /// Root widget for the JTK25 client application.
 class Jtk25App extends StatelessWidget {
   const Jtk25App({super.key});
@@ -47,17 +50,11 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/pengumuman',
-      builder: (context, state) => const _PlaceholderPage(
-        title: 'Pengumuman',
-        subtitle: 'Pengumuman terbaru',
-      ),
+      builder: (context, state) => const AnnouncementsListPage(),
     ),
     GoRoute(
       path: '/kegiatan',
-      builder: (context, state) => const _PlaceholderPage(
-        title: 'Kegiatan',
-        subtitle: 'Kegiatan kampus',
-      ),
+      builder: (context, state) => const EventsListPage(),
     ),
   ],
 );
