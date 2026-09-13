@@ -1,16 +1,17 @@
 /// Settings feature UI — pengaturan aplikasi JTK25.
 ///
-/// Displays class selection and notification preferences.
+/// Displays class selection and a single notification toggle.
 /// All strings in Bahasa Indonesia.
 library;
 
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/notifications/notification_providers.dart';
-import '../../../core/notifications/notification_service.dart';
-import '../../../core/notifications/fcm_service.dart';
 import '../../schedule/providers/schedule_providers.dart';
 import '../data/settings_data.dart';
 
@@ -27,11 +28,8 @@ class SettingsPage extends ConsumerWidget {
           // Class selection section.
           const _ClassSelectionSection(),
           const Divider(),
-          // Pemberitahuan section.
+          // Pemberitahuan section — single toggle.
           const _NotificationSection(),
-          const Divider(),
-          // Info pemberitahuan section.
-          const _FcmPushSection(),
         ],
       ),
     );
@@ -83,7 +81,7 @@ class _ClassSelectionSection extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Notification section
+// Notification section — single enable/disable toggle
 // ---------------------------------------------------------------------------
 
 class _NotificationSection extends ConsumerWidget {
@@ -106,8 +104,9 @@ class _NotificationSection extends ConsumerWidget {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
+        // Main toggle.
         SwitchListTile(
-          title: const Text('Aktifkan Pemberitahuan'),
+          title: const Text('Pemberitahuan'),
           subtitle: statusAsync.when(
             loading: () => const Text('Memuat...'),
             error: (_, _) => const Text('Gagal memuat status'),
@@ -118,47 +117,31 @@ class _NotificationSection extends ConsumerWidget {
             ref.read(notificationEnabledProvider.notifier).toggle(value);
           },
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Dapatkan kabar jadwal pengganti & pengumuman langsung ke HP-mu.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+        // Description when off.
+        if (!enabled)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Kabar jadwal pengganti & pengumuman',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        // "Atur" button → navigate to permission screen.
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: OutlinedButton.icon(
-            onPressed: () {
-              context.push('/pengaturan/notifikasi');
-            },
-            icon: const Icon(Icons.notifications_active),
-            label: const Text('Lihat Detail'),
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Permission request button (when enabled but permission denied).
+        // Blocked state: tap to open app settings.
         if (enabled)
           statusAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
             data: (status) {
               if (status == 'Diblokir — atur di pengaturan HP') {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final service = NotificationService.instance;
-                      await service.requestPermission();
-                      // Refresh the status.
-                      ref.invalidate(notificationStatusProvider);
-                    },
-                    icon: const Icon(Icons.notifications_active),
-                    label: const Text('Aktifkan Pemberitahuan'),
+                return ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Atur di pengaturan HP'),
+                  subtitle: const Text(
+                    'Izin pemberitahuan diblokir oleh sistem',
                   ),
+                  onTap: () => _openAppSettings(),
                 );
               }
               return const SizedBox.shrink();
@@ -167,67 +150,19 @@ class _NotificationSection extends ConsumerWidget {
       ],
     );
   }
-}
 
-// ---------------------------------------------------------------------------
-// Info pemberitahuan section
-// ---------------------------------------------------------------------------
-
-class _FcmPushSection extends ConsumerWidget {
-  const _FcmPushSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final fcmStatusAsync = ref.watch(fcmStatusProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            'Info Kelas',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.cloud_queue),
-          title: const Text('Status pengiriman'),
-          subtitle: fcmStatusAsync.when(
-            loading: () => const Text('Memuat...'),
-            error: (e, _) => const Text('Gagal memuat status'),
-            data: (status) => Text(status),
-          ),
-        ),
-        if (!FcmService.instance.isSupported)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Fitur ini belum aktif di browser. Gunakan Chrome atau Firefox untuk menerima pemberitahuan.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: OutlinedButton.icon(
-            onPressed: () async {
-              final selectedClass = ref.read(selectedClassProvider);
-              if (selectedClass.isNotEmpty) {
-                await FcmService.instance.subscribeToClassTopic(selectedClass);
-                ref.invalidate(fcmStatusProvider);
-              }
-            },
-            icon: const Icon(Icons.info_outline),
-            label: const Text('Perbarui info kelas'),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
+  /// Open app settings on Android so user can unblock notifications.
+  Future<void> _openAppSettings() async {
+    if (kIsWeb) return;
+    try {
+      if (!kIsWeb && Platform.isAndroid) {
+        await launchUrl(
+          Uri.parse('package:com.jtk25.jadwalku'),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } catch (e) {
+      debugPrint('Gagal membuka pengaturan aplikasi: $e');
+    }
   }
 }
