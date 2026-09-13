@@ -75,6 +75,15 @@ Setiap fitur memiliki subdirektori: `data/`, `providers/`, `ui/`.
 4. Push dan buka PR ke `main`
 5. Tunggu review dan CI passing
 
+## CI/CD
+
+GitHub Actions workflow sudah terkonfigurasi di `.github/workflows/`:
+
+- **ci.yml** — Triggered on push/PR ke `main`. Menjalankan `flutter analyze`, `flutter test`, dan `flutter build web` (dengan artifact upload).
+- **release.yml** — Triggered saat push tag `v*`. Build APK release dan otomatis buat GitHub Release dengan file APK.
+
+> **Catatan:** Client CI tidak memerlukan secrets tambahan. Semua dependencies di-install dari pub.dev secara publik.
+
 ## Keamanan Keystore
 
 **PENTING:** Keystore Android (`upload-keystore.jks`) harus konsisten di semua environment build.
