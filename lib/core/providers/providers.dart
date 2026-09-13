@@ -5,7 +5,6 @@
 /// network-first, cache-fallback strategy.
 library;
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/jtk_api.dart';
@@ -72,14 +71,18 @@ final fetchMetaProvider = FutureProvider<MetaResponse>((ref) async {
     ref.read(dataVersionProvider.notifier).update(meta.dataVersion);
     ref.read(schemaVersionProvider.notifier).update(meta.schema);
 
-    // Cache meta.
-    final cache = ref.read(offlineCacheProvider);
-    await cache.save(CacheKey.meta, {
-      'schema': meta.schema,
-      'dataVersion': meta.dataVersion,
-    });
+    // Cache meta (non-critical — don't let cache failure lose network data).
+    try {
+      final cache = ref.read(offlineCacheProvider);
+      await cache.save(CacheKey.meta, {
+        'schema': meta.schema,
+        'dataVersion': meta.dataVersion,
+      });
+    } catch (_) {
+      // Cache write failed; network data is still valid.
+    }
     return meta;
-  } on DioException catch (_) {
+  } on Object catch (_) {
     // Fallback to cache.
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.meta);
@@ -95,13 +98,17 @@ final schedulesProvider = FutureProvider<SchedulesResponse>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final schedules = await api.schedules();
-    final cache = ref.read(offlineCacheProvider);
-    await cache.save(CacheKey.schedules, {
-      'semester': schedules.semester,
-      'classes': schedules.classes.map((c) => c.toJson()).toList(),
-    });
+    try {
+      final cache = ref.read(offlineCacheProvider);
+      await cache.save(CacheKey.schedules, {
+        'semester': schedules.semester,
+        'classes': schedules.classes.map((c) => c.toJson()).toList(),
+      });
+    } catch (_) {
+      // Cache write failed; network data is still valid.
+    }
     return schedules;
-  } on DioException catch (_) {
+  } on Object catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.schedules);
     if (cached is Map<String, dynamic>) {
@@ -116,12 +123,16 @@ final penggantiProvider = FutureProvider<List<PenggantiEntry>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final entries = await api.pengganti();
-    final cache = ref.read(offlineCacheProvider);
-    await cache.save(CacheKey.pengganti, {
-      'data': entries.map((e) => e.toJson()).toList(),
-    });
+    try {
+      final cache = ref.read(offlineCacheProvider);
+      await cache.save(CacheKey.pengganti, {
+        'data': entries.map((e) => e.toJson()).toList(),
+      });
+    } catch (_) {
+      // Cache write failed; network data is still valid.
+    }
     return entries;
-  } on Exception catch (_) {
+  } on Object catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.pengganti);
     if (cached is Map<String, dynamic>) {
@@ -145,12 +156,16 @@ final announcementsProvider = FutureProvider<List<Announcement>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.announcements();
-    final cache = ref.read(offlineCacheProvider);
-    await cache.save(CacheKey.announcements, {
-      'data': items.map((a) => a.toJson()).toList(),
-    });
+    try {
+      final cache = ref.read(offlineCacheProvider);
+      await cache.save(CacheKey.announcements, {
+        'data': items.map((a) => a.toJson()).toList(),
+      });
+    } catch (_) {
+      // Cache write failed; network data is still valid.
+    }
     return items;
-  } on Exception catch (_) {
+  } on Object catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.announcements);
     if (cached is Map<String, dynamic>) {
@@ -176,12 +191,16 @@ final eventsProvider = FutureProvider<List<JtkEvent>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.events();
-    final cache = ref.read(offlineCacheProvider);
-    await cache.save(CacheKey.events, {
-      'data': items.map((e) => e.toJson()).toList(),
-    });
+    try {
+      final cache = ref.read(offlineCacheProvider);
+      await cache.save(CacheKey.events, {
+        'data': items.map((e) => e.toJson()).toList(),
+      });
+    } catch (_) {
+      // Cache write failed; network data is still valid.
+    }
     return items;
-  } on Exception catch (_) {
+  } on Object catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.events);
     if (cached is Map<String, dynamic>) {
@@ -200,12 +219,16 @@ final dosenProvider = FutureProvider<List<Dosen>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.dosen();
-    final cache = ref.read(offlineCacheProvider);
-    await cache.save(CacheKey.dosen, {
-      'data': items.map((d) => d.toJson()).toList(),
-    });
+    try {
+      final cache = ref.read(offlineCacheProvider);
+      await cache.save(CacheKey.dosen, {
+        'data': items.map((d) => d.toJson()).toList(),
+      });
+    } catch (_) {
+      // Cache write failed; network data is still valid.
+    }
     return items;
-  } on Exception catch (_) {
+  } on Object catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.dosen);
     if (cached is Map<String, dynamic>) {
@@ -223,12 +246,16 @@ final roomsProvider = FutureProvider<List<Room>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final items = await api.rooms();
-    final cache = ref.read(offlineCacheProvider);
-    await cache.save(CacheKey.rooms, {
-      'data': items.map((r) => r.toJson()).toList(),
-    });
+    try {
+      final cache = ref.read(offlineCacheProvider);
+      await cache.save(CacheKey.rooms, {
+        'data': items.map((r) => r.toJson()).toList(),
+      });
+    } catch (_) {
+      // Cache write failed; network data is still valid.
+    }
     return items;
-  } on Exception catch (_) {
+  } on Object catch (_) {
     final cache = ref.read(offlineCacheProvider);
     final cached = cache.loadJson(CacheKey.rooms);
     if (cached is Map<String, dynamic>) {

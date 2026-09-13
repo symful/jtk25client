@@ -1,52 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jtk25_client/core/api/etag_interceptor.dart';
 import 'package:jtk25_client/core/api/jtk_api.dart';
 import 'package:jtk25_client/core/models/meta.dart';
 import 'package:jtk25_client/core/models/schedule.dart';
 
 void main() {
-  group('ETagInterceptor', () {
-    late ETagInterceptor interceptor;
-    late Dio dio;
-
-    setUp(() {
-      interceptor = ETagInterceptor();
-      dio = Dio(
-        BaseOptions(
-          baseUrl: 'https://example.com',
-          connectTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 5),
-        ),
-      );
-      dio.interceptors.add(interceptor);
-    });
-
-    test('stores ETag from successful response', () async {
-      // We can't easily mock Dio's adapter in pure dart tests,
-      // so we test the interceptor logic directly.
-      interceptor.setEtag('/api/v1/meta', '"abc123"');
-      expect(interceptor.getEtag('/api/v1/meta'), '"abc123"');
-    });
-
-    test('clear removes all ETags and cache', () {
-      interceptor.setEtag('/a', '1');
-      interceptor.setEtag('/b', '2');
-      interceptor.clear();
-      expect(interceptor.getEtag('/a'), isNull);
-      expect(interceptor.getEtag('/b'), isNull);
-    });
-
-    test('304 path stores cached response', () {
-      interceptor.setEtag('/api/v1/meta', '"abc"');
-      expect(interceptor.etag304Response, isNull);
-      // Simulate what happens on 304: the cached response is stored.
-      interceptor.etag304Response = {'schema': 2, 'dataVersion': 'v1'};
-      expect(interceptor.etag304Response, isNotNull);
-      expect(interceptor.etag304Response!['schema'], 2);
-    });
-  });
-
   group('JtkApi', () {
     test('creates with default base URL', () {
       final api = JtkApi();
@@ -57,12 +14,6 @@ void main() {
     test('creates with custom base URL', () {
       final api = JtkApi(baseUrl: 'https://custom.api.com');
       expect(api, isNotNull);
-      api.close();
-    });
-
-    test('etagInterceptor is accessible', () {
-      final api = JtkApi();
-      expect(api.etagInterceptor, isNotNull);
       api.close();
     });
   });

@@ -1,4 +1,4 @@
-/// JTK25 API client — Dio-based HTTP client with ETag caching.
+/// JTK25 API client — plain Dio GETs with no conditional caching.
 ///
 /// Base URL is configurable via `--dart-define=API_BASE=...` at build time.
 /// Falls back to the production URL if not set.
@@ -13,7 +13,7 @@ import '../models/meta.dart';
 import '../models/pengganti.dart';
 import '../models/room.dart';
 import '../models/schedule.dart';
-import 'etag_interceptor.dart';
+import '../utils/debug_log.dart';
 
 /// Production API base URL (fallback when no --dart-define is provided).
 /// Uses the custom domain jtk25.my.id.
@@ -35,16 +35,8 @@ class JtkApi {
 
   late final Dio _dio;
 
-  /// The ETag interceptor instance, exposed for cache management.
-  ETagInterceptor? get etagInterceptor {
-    for (final inter in _dio.interceptors) {
-      if (inter is ETagInterceptor) return inter;
-    }
-    return null;
-  }
-
   static Dio _createDio(String baseUrl) {
-    final dio = Dio(
+    return Dio(
       BaseOptions(
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
@@ -52,24 +44,25 @@ class JtkApi {
         headers: {'Accept': 'application/json'},
       ),
     );
-    dio.interceptors.add(ETagInterceptor());
-    return dio;
   }
 
   /// Fetch meta info: schema version and data version.
   Future<MetaResponse> meta() async {
+    debugLog('[JtkApi] GET /api/v1/meta');
     final resp = await _dio.get<Map<String, dynamic>>('/api/v1/meta');
     return MetaResponse.fromJson(resp.data!);
   }
 
   /// Fetch all class schedules.
   Future<SchedulesResponse> schedules() async {
+    debugLog('[JtkApi] GET /api/v1/schedules');
     final resp = await _dio.get<Map<String, dynamic>>('/api/v1/schedules');
     return SchedulesResponse.fromJson(resp.data!);
   }
 
   /// Fetch pengganti (schedule overrides).
   Future<List<PenggantiEntry>> pengganti() async {
+    debugLog('[JtkApi] GET /api/v1/pengganti');
     final resp = await _dio.get<Map<String, dynamic>>('/api/v1/pengganti');
     return _unwrapList(resp.data).map((e) {
       return PenggantiEntry.fromJson(e);
@@ -78,6 +71,7 @@ class JtkApi {
 
   /// Fetch announcements.
   Future<List<Announcement>> announcements() async {
+    debugLog('[JtkApi] GET /api/v1/announcements');
     final resp = await _dio.get<Map<String, dynamic>>('/api/v1/announcements');
     return _unwrapList(resp.data).map((e) {
       return Announcement.fromJson(e);
@@ -86,6 +80,7 @@ class JtkApi {
 
   /// Fetch events.
   Future<List<JtkEvent>> events() async {
+    debugLog('[JtkApi] GET /api/v1/events');
     final resp = await _dio.get<Map<String, dynamic>>('/api/v1/events');
     return _unwrapList(resp.data).map((e) {
       return JtkEvent.fromJson(e);
@@ -94,6 +89,7 @@ class JtkApi {
 
   /// Fetch lecturers.
   Future<List<Dosen>> dosen() async {
+    debugLog('[JtkApi] GET /api/v1/dosen');
     final resp = await _dio.get<Map<String, dynamic>>('/api/v1/dosen');
     return _unwrapList(resp.data).map((e) {
       return Dosen.fromJson(e);
@@ -102,6 +98,7 @@ class JtkApi {
 
   /// Fetch rooms.
   Future<List<Room>> rooms() async {
+    debugLog('[JtkApi] GET /api/v1/rooms');
     final resp = await _dio.get<Map<String, dynamic>>('/api/v1/rooms');
     return _unwrapList(resp.data).map((e) {
       return Room.fromJson(e);

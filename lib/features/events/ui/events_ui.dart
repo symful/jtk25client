@@ -6,14 +6,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/cache/offline_cache.dart';
 import '../../../core/models/event.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/ui/refresh_helpers.dart';
 import '../data/events_data.dart';
 import '../providers/events_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Events list page
 // ---------------------------------------------------------------------------
+
+/// Refresh events: invalidate provider → await → change detection.
+Future<void> _onRefreshEvents(BuildContext context, WidgetRef ref) async {
+  await refreshData(
+    context,
+    ref,
+    keys: [CacheKey.events],
+    refresh: () async {
+      ref.invalidate(eventsProvider);
+      await ref.read(eventsProvider.future);
+    },
+  );
+}
 
 /// Full-screen grouped events page.
 class EventsListPage extends ConsumerWidget {
@@ -25,7 +40,12 @@ class EventsListPage extends ConsumerWidget {
     final fromCache = ref.watch(eventsFromCacheProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Acara')),
+      appBar: AppBar(
+        title: const Text('Acara'),
+        actions: [
+          AppRefreshButton(onRefresh: () => _onRefreshEvents(context, ref)),
+        ],
+      ),
       body: asyncGroups.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -48,9 +68,7 @@ class EventsListPage extends ConsumerWidget {
                 ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(groupedEventsProvider);
-                  },
+                  onRefresh: () => _onRefreshEvents(context, ref),
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: groups.fold<int>(

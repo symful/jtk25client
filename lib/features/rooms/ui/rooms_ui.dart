@@ -9,15 +9,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/cache/offline_cache.dart';
 import '../../../core/models/room.dart';
 import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/ui/refresh_helpers.dart';
 import '../data/rooms_data.dart';
 import '../providers/rooms_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Rooms list page
 // ---------------------------------------------------------------------------
+
+/// Refresh rooms + schedules (for matrix): invalidate providers → await → change detection.
+Future<void> _onRefreshRooms(BuildContext context, WidgetRef ref) async {
+  await refreshData(
+    context,
+    ref,
+    keys: [CacheKey.rooms, CacheKey.schedules],
+    refresh: () async {
+      ref.invalidate(roomsProvider);
+      ref.invalidate(schedulesProvider);
+      await ref.read(roomsProvider.future);
+      await ref.read(schedulesProvider.future);
+    },
+  );
+}
 
 /// Full-screen searchable room list with availability summary.
 class RoomsListPage extends ConsumerWidget {
@@ -28,7 +45,12 @@ class RoomsListPage extends ConsumerWidget {
     final filtered = ref.watch(filteredRoomsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ruangan')),
+      appBar: AppBar(
+        title: const Text('Ruangan'),
+        actions: [
+          AppRefreshButton(onRefresh: () => _onRefreshRooms(context, ref)),
+        ],
+      ),
       body: Column(
         children: [
           // Search bar.
@@ -54,21 +76,31 @@ class RoomsListPage extends ConsumerWidget {
           const _AvailableNowBanner(),
           // Room list.
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Tidak ada ruangan ditemukan',
-                      style: TextStyle(color: Colors.grey),
+            child: RefreshIndicator(
+              onRefresh: () => _onRefreshRooms(context, ref),
+              child: filtered.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 100),
+                        Center(
+                          child: Text(
+                            'Tidak ada ruangan ditemukan',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        return _RoomListTile(room: filtered[index]);
+                      },
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      return _RoomListTile(room: filtered[index]);
-                    },
-                  ),
+            ),
           ),
           // Matrix button.
           Padding(
@@ -393,6 +425,7 @@ class AvailabilityMatrixPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Matriks Ketersediaan'),
         actions: [
+          AppRefreshButton(onRefresh: () => _onRefreshRooms(context, ref)),
           PopupMenuButton<MatrixFilterMode>(
             icon: Badge(
               isLabelVisible: filterMode != MatrixFilterMode.all,
@@ -471,21 +504,25 @@ class _MatrixList extends ConsumerWidget {
       children: [
         const _MatrixLegend(),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: displayRooms.length,
-            itemBuilder: (context, index) {
-              final room = displayRooms[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: _RoomMatrix(
-                  room: room,
-                  matrix: matrix,
-                  highlightDay: highlightDay,
-                  highlightSlot: highlightSlot,
-                ),
-              );
-            },
+          child: RefreshIndicator(
+            onRefresh: () => _onRefreshRooms(context, ref),
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(12),
+              itemCount: displayRooms.length,
+              itemBuilder: (context, index) {
+                final room = displayRooms[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: _RoomMatrix(
+                    room: room,
+                    matrix: matrix,
+                    highlightDay: highlightDay,
+                    highlightSlot: highlightSlot,
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],

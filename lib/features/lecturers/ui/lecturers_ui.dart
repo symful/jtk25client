@@ -8,13 +8,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/cache/offline_cache.dart';
 import '../../../core/models/schedule.dart';
+import '../../../core/providers/providers.dart';
+import '../../../core/ui/refresh_helpers.dart';
 import '../data/lecturers_data.dart';
 import '../providers/lecturers_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Lecturers list page
 // ---------------------------------------------------------------------------
+
+/// Refresh lecturers: invalidate provider → await → change detection.
+Future<void> _onRefreshDosen(BuildContext context, WidgetRef ref) async {
+  await refreshData(
+    context,
+    ref,
+    keys: [CacheKey.dosen],
+    refresh: () async {
+      ref.invalidate(dosenProvider);
+      await ref.read(dosenProvider.future);
+    },
+  );
+}
 
 /// Full-screen searchable dosen list.
 class LecturersListPage extends ConsumerWidget {
@@ -25,7 +41,12 @@ class LecturersListPage extends ConsumerWidget {
     final filtered = ref.watch(filteredDosenProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dosen')),
+      appBar: AppBar(
+        title: const Text('Dosen'),
+        actions: [
+          AppRefreshButton(onRefresh: () => _onRefreshDosen(context, ref)),
+        ],
+      ),
       body: Column(
         children: [
           // Search bar.
@@ -49,36 +70,46 @@ class LecturersListPage extends ConsumerWidget {
           ),
           // Dosen list.
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Tidak ada dosen ditemukan',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final dosen = filtered[index];
-                      return ListTile(
-                        leading: CircleAvatar(
+            child: RefreshIndicator(
+              onRefresh: () => _onRefreshDosen(context, ref),
+              child: filtered.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 100),
+                        Center(
                           child: Text(
-                            dosen.code.length <= 2
-                                ? dosen.code
-                                : dosen.code.substring(0, 2),
+                            'Tidak ada dosen ditemukan',
+                            style: TextStyle(color: Colors.grey),
                           ),
                         ),
-                        title: Text(dosen.name),
-                        subtitle: Text(dosen.code),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          context.push('/dosen/${dosen.code}');
-                        },
-                      );
-                    },
-                  ),
+                      ],
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final dosen = filtered[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text(
+                              dosen.code.length <= 2
+                                  ? dosen.code
+                                  : dosen.code.substring(0, 2),
+                            ),
+                          ),
+                          title: Text(dosen.name),
+                          subtitle: Text(dosen.code),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            context.push('/dosen/${dosen.code}');
+                          },
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

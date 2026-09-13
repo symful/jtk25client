@@ -18,6 +18,14 @@ class CachedPayload {
   /// ISO 8601 timestamp of when this payload was fetched.
   final String fetchedAt;
 
+  /// Whether this payload is older than 5 minutes (stale but still usable).
+  bool get isStale {
+    final fetched = DateTime.tryParse(fetchedAt);
+    if (fetched == null) return true;
+    return DateTime.now().toUtc().difference(fetched) >
+        const Duration(minutes: 5);
+  }
+
   Map<String, dynamic> toMap() => {'json': json, 'fetchedAt': fetchedAt};
 
   factory CachedPayload.fromMap(Map<String, dynamic> map) {

@@ -11,6 +11,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:workmanager/workmanager.dart';
 
 import 'app.dart';
+import 'core/cache/offline_cache.dart';
 import 'core/notifications/fcm_service.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/notifications/workmanager_callback.dart';
@@ -36,6 +37,9 @@ void main() async {
 
   // Open settings box for class selection persistence.
   await Hive.openBox(kSettingsBoxName);
+
+  // Initialize offline cache boxes for network-first, cache-fallback strategy.
+  await OfflineCache().init();
 
   // Initialize timezone database with Asia/Jakarta
   tz.initializeTimeZones();

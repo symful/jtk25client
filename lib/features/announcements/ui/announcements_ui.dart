@@ -7,12 +7,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/models/announcement.dart';
+import '../../../core/cache/offline_cache.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/ui/refresh_helpers.dart';
 import '../providers/announcements_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Announcements list page
 // ---------------------------------------------------------------------------
+
+/// Refresh announcements: invalidate provider → await → change detection.
+Future<void> _onRefreshAnnouncements(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  await refreshData(
+    context,
+    ref,
+    keys: [CacheKey.announcements],
+    refresh: () async {
+      ref.invalidate(announcementsProvider);
+      await ref.read(announcementsProvider.future);
+    },
+  );
+}
 
 /// Full-screen list of active announcements.
 class AnnouncementsListPage extends ConsumerWidget {
@@ -24,7 +42,14 @@ class AnnouncementsListPage extends ConsumerWidget {
     final fromCache = ref.watch(announcementsFromCacheProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pengumuman')),
+      appBar: AppBar(
+        title: const Text('Pengumuman'),
+        actions: [
+          AppRefreshButton(
+            onRefresh: () => _onRefreshAnnouncements(context, ref),
+          ),
+        ],
+      ),
       body: asyncItems.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -47,9 +72,7 @@ class AnnouncementsListPage extends ConsumerWidget {
                 ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(filteredAnnouncementsProvider);
-                  },
+                  onRefresh: () => _onRefreshAnnouncements(context, ref),
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: items.length,
