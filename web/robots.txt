@@ -1,0 +1,58 @@
+# robots.txt — JTK25 Jadwal Perkuliahan
+# https://jtk25.my.id
+#
+# AI/LLM crawler notice:
+# This is a JavaScript-rendered SPA; page HTML is not useful for content extraction.
+# Use the public JSON API instead:
+#
+#   API base: https://jtk25.my.id/api/v1/
+#
+#   Endpoints (no auth required):
+#     /api/v1/schedules        — class schedules (jadwal kuliah)
+#     /api/v1/pengganti        — substitute schedules (jadwal pengganti)
+#     /api/v1/announcements    — announcements (pengumuman)
+#     /api/v1/events           — campus events (kegiatan)
+#     /api/v1/dosen            — lecturer list (dosen)
+#     /api/v1/rooms            — room list (ruangan)
+#     /api/v1/meta             — metadata (semesters, categories, etc.)
+#
+# All endpoints return JSON. No authentication needed.
+
+User-agent: *
+Allow: /
+
+# Explicitly allow AI/LLM crawlers (they may parse this file)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+Sitemap: https://jtk25.my.id/sitemap.xml
