@@ -10,6 +10,12 @@ class SettingsKeys {
 
   /// The currently selected class code (e.g. "D3-3A").
   static const String selectedClass = 'selected_class';
+
+  /// Whether notifications are enabled.
+  static const String notificationsEnabled = 'notifications_enabled';
+
+  /// Last-seen data version (for notification dedup).
+  static const String lastDataVersion = 'notification_last_data_version';
 }
 
 /// All known class codes in the app.
