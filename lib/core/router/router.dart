@@ -17,6 +17,7 @@ import '../../features/pengganti/pengganti.dart';
 import '../../features/rooms/rooms.dart';
 import '../../features/schedule/schedule.dart';
 import '../../features/settings/settings.dart';
+import '../../features/settings/ui/notification_permission_screen.dart';
 import '../shell/editor_placeholder.dart';
 import '../shell/landing_page.dart';
 import '../shell/not_found_page.dart';
@@ -125,6 +126,13 @@ GoRouter createRouter() {
               GoRoute(
                 path: '/pengaturan',
                 builder: (context, state) => const SettingsPage(),
+                routes: [
+                  GoRoute(
+                    path: 'notifikasi',
+                    builder: (context, state) =>
+                        const NotificationPermissionScreen(),
+                  ),
+                ],
               ),
             ],
           ),

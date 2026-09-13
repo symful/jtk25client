@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/notifications/notification_providers.dart';
 import '../../../core/notifications/notification_service.dart';
@@ -109,7 +110,7 @@ class _NotificationSection extends ConsumerWidget {
           title: const Text('Aktifkan Notifikasi'),
           subtitle: statusAsync.when(
             loading: () => const Text('Memuat...'),
-            error: (e, _) => const Text('Gagal memuat status'),
+            error: (_, _) => const Text('Gagal memuat status'),
             data: (status) => Text(status),
           ),
           value: enabled,
@@ -126,12 +127,24 @@ class _NotificationSection extends ConsumerWidget {
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        // "Atur" button → navigate to permission screen.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: OutlinedButton.icon(
+            onPressed: () {
+              context.push('/pengaturan/notifikasi');
+            },
+            icon: const Icon(Icons.notifications_active),
+            label: const Text('Atur'),
+          ),
+        ),
         const SizedBox(height: 16),
         // Permission request button (when enabled but permission denied).
         if (enabled)
           statusAsync.when(
             loading: () => const SizedBox.shrink(),
-            error: (e, _) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
             data: (status) {
               if (status == 'Nonaktif (izin ditolak)') {
                 return Padding(
