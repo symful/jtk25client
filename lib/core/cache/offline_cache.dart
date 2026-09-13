@@ -64,9 +64,15 @@ class OfflineCache {
     _initialized = true;
   }
 
+  /// Whether the cache boxes have been opened.
+  bool get isInitialized => _initialized;
+
   /// Save a payload for the given [key].
+  ///
+  /// Returns silently if the cache is not yet initialized.
   Future<void> save(CacheKey key, Map<String, dynamic> payload) async {
     final box = _getBox(key);
+    if (box == null) return; // Graceful no-op when uninitialized.
     final entry = CachedPayload(
       json: jsonEncode(payload),
       fetchedAt: DateTime.now().toUtc().toIso8601String(),
@@ -75,8 +81,11 @@ class OfflineCache {
   }
 
   /// Load the cached payload for [key], or null if not cached.
+  ///
+  /// Returns null if the cache is not yet initialized.
   CachedPayload? load(CacheKey key) {
     final box = _getBox(key);
+    if (box == null) return null;
     final raw = box.get('data');
     if (raw == null) return null;
     try {
@@ -88,6 +97,8 @@ class OfflineCache {
   }
 
   /// Parse and return the cached JSON payload as a decoded object.
+  ///
+  /// Returns null if the cache is not yet initialized.
   dynamic loadJson(CacheKey key) {
     final cached = load(key);
     if (cached == null) return null;
@@ -101,7 +112,7 @@ class OfflineCache {
   /// Clear the cache for a single [key].
   Future<void> clearOne(CacheKey key) async {
     final box = _getBox(key);
-    await box.clear();
+    await box?.clear();
   }
 
   /// Clear all cached data.
@@ -111,11 +122,6 @@ class OfflineCache {
     }
   }
 
-  Box<String> _getBox(CacheKey key) {
-    final box = _boxes[key.boxKey];
-    if (box == null) {
-      throw StateError('Cache not initialized. Call init() first.');
-    }
-    return box;
-  }
+  /// Returns the Hive box for [key], or null if cache is not initialized.
+  Box<String>? _getBox(CacheKey key) => _boxes[key.boxKey];
 }

@@ -51,6 +51,16 @@ SchedulesResponse _makeSchedulesResponse({
   );
 }
 
+String _dayLabel(Day day) => switch (day) {
+  Day.senin => 'Senin',
+  Day.selasa => 'Selasa',
+  Day.rabu => 'Rabu',
+  Day.kamis => 'Kamis',
+  Day.jumat => 'Jumat',
+  Day.sabtu => 'Sabtu',
+  Day.minggu => 'Minggu',
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -71,9 +81,8 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  group('Day switcher chips', () {
+  group('Day chips navigation', () {
     testWidgets('defaults to today\'s weekday', (tester) async {
-      // Build schedule data with sessions on all 5 weekdays.
       final schedules = _makeSchedulesResponse(
         className: testClassName,
         daySessions: {
@@ -108,8 +117,7 @@ void main() {
       final wibNow = today.toUtc().add(const Duration(hours: 7));
       final todayDay = Day.values[wibNow.weekday - 1];
 
-      // If today is a weekday with sessions, verify its content is shown.
-      // If today is weekend, no sessions exist — just chips are visible.
+      // If today is a weekday with sessions, verify its chip is present.
       final dayHasSessions = {
         Day.senin: true,
         Day.selasa: true,
@@ -120,7 +128,8 @@ void main() {
         Day.minggu: false,
       };
       if (dayHasSessions[todayDay] == true) {
-        expect(find.text(todayDay.name.toUpperCase()), findsWidgets);
+        final todayChipLabel = _dayLabel(todayDay);
+        expect(find.text(todayChipLabel), findsOneWidget);
       }
     });
 
@@ -153,76 +162,7 @@ void main() {
       expect(find.text('RAB-202'), findsOneWidget);
     });
 
-    testWidgets('Hari Ini reset chip appears when non-today selected', (
-      tester,
-    ) async {
-      final schedules = _makeSchedulesResponse(
-        className: testClassName,
-        daySessions: {
-          Day.senin: [_makeSession(time: '07.00-08.40', courseCode: 'SEN')],
-          Day.rabu: [_makeSession(time: '07.00-08.40', courseCode: 'RAB')],
-        },
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            schedulesProvider.overrideWithValue(AsyncData(schedules)),
-            penggantiProvider.overrideWithValue(const AsyncData([])),
-          ],
-          child: const MaterialApp(home: SchedulePage()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // If today is NOT Rabu, tapping Rabu should show "Hari Ini" chip.
-      final today = DateTime.now();
-      final wibNow = today.toUtc().add(const Duration(hours: 7));
-      final todayDay = Day.values[wibNow.weekday - 1];
-
-      if (todayDay != Day.rabu) {
-        await tester.tap(find.text('Rabu'));
-        await tester.pumpAndSettle();
-
-        // "Hari Ini" reset chip should appear.
-        expect(find.text('Hari Ini'), findsWidgets);
-      }
-    });
-
-    testWidgets('week view is unchanged by day selection', (tester) async {
-      final schedules = _makeSchedulesResponse(
-        className: testClassName,
-        daySessions: {
-          Day.senin: [_makeSession(time: '07.00-08.40', courseCode: 'SEN')],
-          Day.rabu: [_makeSession(time: '07.00-08.40', courseCode: 'RAB')],
-        },
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            schedulesProvider.overrideWithValue(AsyncData(schedules)),
-            penggantiProvider.overrideWithValue(const AsyncData([])),
-          ],
-          child: const MaterialApp(home: SchedulePage()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Switch to week view.
-      await tester.tap(find.text('Mingguan'));
-      await tester.pumpAndSettle();
-
-      // Week view should show day headers for the week.
-      expect(find.textContaining('SENIN'), findsOneWidget);
-      expect(find.textContaining('RABU'), findsOneWidget);
-
-      // Day chips should NOT be visible in week view.
-      // (They only appear in "Hari Ini" mode.)
-    });
-
     testWidgets('only shows chips for days with sessions', (tester) async {
-      // Class only has sessions on Senin and Rabu.
       final schedules = _makeSchedulesResponse(
         className: testClassName,
         daySessions: {
@@ -250,6 +190,29 @@ void main() {
       expect(find.text('Selasa'), findsNothing);
       expect(find.text('Kamis'), findsNothing);
       expect(find.text('Jumat'), findsNothing);
+    });
+
+    testWidgets('no segmented toggle present', (tester) async {
+      final schedules = _makeSchedulesResponse(
+        className: testClassName,
+        daySessions: {
+          Day.senin: [_makeSession(time: '07.00-08.40', courseCode: 'SEN')],
+        },
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            schedulesProvider.overrideWithValue(AsyncData(schedules)),
+            penggantiProvider.overrideWithValue(const AsyncData([])),
+          ],
+          child: const MaterialApp(home: SchedulePage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The old "Hari Ini" / "Mingguan" segmented toggle must NOT exist.
+      expect(find.text('Mingguan'), findsNothing);
     });
   });
 }

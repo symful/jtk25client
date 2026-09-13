@@ -1,4 +1,4 @@
-/// Schedule feature providers — view mode, merged sessions, resolved schedule.
+/// Schedule feature providers — day selection, merged sessions, resolved schedule.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,28 +10,7 @@ import '../../../core/utils/time_slot.dart';
 import '../../settings/data/settings_data.dart';
 
 // ---------------------------------------------------------------------------
-// View mode
-// ---------------------------------------------------------------------------
-
-/// Whether the schedule view shows today or the full week.
-enum ScheduleViewMode { today, week }
-
-/// Notifier for the schedule view mode toggle.
-class _ViewModeNotifier extends Notifier<ScheduleViewMode> {
-  @override
-  ScheduleViewMode build() => ScheduleViewMode.today;
-
-  void setMode(ScheduleViewMode mode) => state = mode;
-}
-
-/// Current schedule view mode (today / week).
-final scheduleViewModeProvider =
-    NotifierProvider<_ViewModeNotifier, ScheduleViewMode>(
-      _ViewModeNotifier.new,
-    );
-
-// ---------------------------------------------------------------------------
-// Selected day (Hari Ini sub-control)
+// Selected day
 // ---------------------------------------------------------------------------
 
 /// Compute today's [Day] in WIB (UTC+7).
@@ -45,7 +24,7 @@ Day _todayWib() {
 /// Whether the selected day equals the actual today in WIB.
 bool isSelectedDayToday(Day selected) => selected == _todayWib();
 
-/// Notifier for the currently selected day within the "Hari Ini" view.
+/// Notifier for the currently selected day.
 ///
 /// Defaults to today's weekday in WIB. Resets on app restart (no persistence).
 class _SelectedDayNotifier extends Notifier<Day> {
@@ -54,12 +33,9 @@ class _SelectedDayNotifier extends Notifier<Day> {
 
   /// Select a different day.
   void selectDay(Day day) => state = day;
-
-  /// Reset selection to today.
-  void resetToToday() => state = _todayWib();
 }
 
-/// Currently selected day in the "Hari Ini" view.
+/// Currently selected day in the schedule view.
 final selectedDayProvider = NotifierProvider<_SelectedDayNotifier, Day>(
   _SelectedDayNotifier.new,
 );

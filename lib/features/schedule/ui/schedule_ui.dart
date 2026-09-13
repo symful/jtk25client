@@ -1,7 +1,8 @@
-/// Schedule feature UI — today/week views with pengganti overlay.
+/// Schedule feature UI — day-chip navigation with pengganti overlay.
 ///
-/// Displays class schedules with session cards, merged consecutive slots,
-/// "Now" indicator, and pengganti banner. All strings in Bahasa Indonesia.
+/// Displays class schedules with day chips for navigation, session cards,
+/// merged consecutive slots, "Now" indicator, and pengganti banner.
+/// All strings in Bahasa Indonesia.
 library;
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/pengganti.dart';
 import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/ui/refresh_helpers.dart';
 import '../../../core/utils/time_slot.dart';
 import '../../settings/data/settings_data.dart';
 import '../providers/schedule_providers.dart';
@@ -18,20 +20,40 @@ import '../providers/schedule_providers.dart';
 // Schedule page
 // ---------------------------------------------------------------------------
 
-/// Full-screen schedule page with class selector and today/week toggle.
+/// Force-refresh schedules + pengganti, bypassing ETag cache.
+Future<void> _onRefreshSchedule(BuildContext context, WidgetRef ref) async {
+  await refreshData(
+    context,
+    ref,
+    endpoints: ['/api/v1/schedules', '/api/v1/pengganti'],
+    refresh: () async {
+      ref.invalidate(schedulesProvider);
+      ref.invalidate(penggantiProvider);
+      await ref.read(schedulesProvider.future);
+      await ref.read(penggantiProvider.future);
+    },
+  );
+}
+
+/// Full-screen schedule page with class selector and day chips.
 class SchedulePage extends ConsumerWidget {
   const SchedulePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Jadwal')),
+      appBar: AppBar(
+        title: const Text('Jadwal'),
+        actions: [
+          AppRefreshButton(onRefresh: () => _onRefreshSchedule(context, ref)),
+        ],
+      ),
       body: Column(
         children: [
           // Class selector chips.
           const _ClassSelector(),
-          // View mode toggle.
-          const _ViewModeToggle(),
+          // Day chips (the navigation — no toggle).
+          const _DayChipsRow(),
           // Schedule content.
           const Expanded(child: _ScheduleContent()),
         ],
@@ -75,82 +97,50 @@ class _ClassSelector extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// View mode toggle
+// Day chips row
 // ---------------------------------------------------------------------------
 
-class _ViewModeToggle extends ConsumerWidget {
-  const _ViewModeToggle();
+class _DayChipsRow extends ConsumerWidget {
+  const _DayChipsRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(scheduleViewModeProvider);
+    final selectedDay = ref.watch(selectedDayProvider);
+    final classCode = ref.watch(selectedClassProvider);
+    final schedulesAsync = ref.watch(schedulesProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: SegmentedButton<ScheduleViewMode>(
-        segments: const [
-          ButtonSegment<ScheduleViewMode>(
-            value: ScheduleViewMode.today,
-            label: Text('Hari Ini'),
-          ),
-          ButtonSegment<ScheduleViewMode>(
-            value: ScheduleViewMode.week,
-            label: Text('Mingguan'),
-          ),
-        ],
-        selected: {mode},
-        onSelectionChanged: (selected) {
-          if (selected.isNotEmpty) {
-            ref.read(scheduleViewModeProvider.notifier).setMode(selected.first);
-          }
-        },
-      ),
+    final daysWithSessions = schedulesAsync.whenOrNull(
+      data: (schedulesResponse) {
+        final classData = schedulesResponse.classes.where(
+          (c) => c.className == classCode,
+        );
+        if (classData.isEmpty) return <Day>[];
+        return classData.first.schedule
+            .where((ds) => ds.sessions.isNotEmpty)
+            .map((ds) => ds.day)
+            .toList();
+      },
     );
-  }
-}
 
-// ---------------------------------------------------------------------------
-// Day switcher chips (inside "Hari Ini" view)
-// ---------------------------------------------------------------------------
-
-class _DayChipsRow extends StatelessWidget {
-  const _DayChipsRow({
-    required this.days,
-    required this.selectedDay,
-    required this.onDaySelected,
-    required this.onResetToday,
-  });
-
-  final List<Day> days;
-  final Day selectedDay;
-  final ValueChanged<Day> onDaySelected;
-  final VoidCallback onResetToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final showReset = !isSelectedDayToday(selectedDay);
+    if (daysWithSessions == null || daysWithSessions.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return SizedBox(
       height: 48,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         scrollDirection: Axis.horizontal,
-        itemCount: showReset ? days.length + 1 : days.length,
+        itemCount: daysWithSessions.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, index) {
-          if (showReset && index == 0) {
-            return ActionChip(
-              avatar: const Icon(Icons.today, size: 18),
-              label: const Text('Hari Ini'),
-              onPressed: onResetToday,
-            );
-          }
-          final dayIndex = showReset ? index - 1 : index;
-          final day = days[dayIndex];
+          final day = daysWithSessions[index];
           return ChoiceChip(
             label: Text(_dayLabel(day)),
             selected: day == selectedDay,
-            onSelected: (_) => onDaySelected(day),
+            onSelected: (_) {
+              ref.read(selectedDayProvider.notifier).selectDay(day);
+            },
           );
         },
       ),
@@ -169,28 +159,11 @@ class _DayChipsRow extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Schedule content (switches between today / week)
+// Schedule content (selected day only)
 // ---------------------------------------------------------------------------
 
 class _ScheduleContent extends ConsumerWidget {
   const _ScheduleContent();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(scheduleViewModeProvider);
-
-    return mode == ScheduleViewMode.today
-        ? const _TodayView()
-        : const _WeekView();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Today view
-// ---------------------------------------------------------------------------
-
-class _TodayView extends ConsumerWidget {
-  const _TodayView();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -218,62 +191,27 @@ class _TodayView extends ConsumerWidget {
 
         final classSchedule = classData.first.schedule;
 
-        // Determine which days have sessions for this class.
-        final daysWithSessions = classSchedule
-            .where((ds) => ds.sessions.isNotEmpty)
-            .map((ds) => ds.day)
-            .toList();
-
-        return Column(
-          children: [
-            // Day switcher chips.
-            _DayChipsRow(
-              days: daysWithSessions,
-              selectedDay: selectedDay,
-              onDaySelected: (day) {
-                ref.read(selectedDayProvider.notifier).selectDay(day);
-              },
-              onResetToday: () {
-                ref.read(selectedDayProvider.notifier).resetToToday();
-              },
+        return RefreshIndicator(
+          onRefresh: () => _onRefreshSchedule(context, ref),
+          child: penggantiAsync.when(
+            loading: () =>
+                _buildDay(classCode, classSchedule, [], selectedDay, isToday),
+            error: (e, _) =>
+                _buildDay(classCode, classSchedule, [], selectedDay, isToday),
+            data: (penggantiEntries) => _buildDay(
+              classCode,
+              classSchedule,
+              penggantiEntries,
+              selectedDay,
+              isToday,
             ),
-            // Schedule content.
-            Expanded(
-              child: penggantiAsync.when(
-                loading: () => _buildDay(
-                  context,
-                  classCode,
-                  classSchedule,
-                  [],
-                  selectedDay,
-                  isToday,
-                ),
-                error: (e, _) => _buildDay(
-                  context,
-                  classCode,
-                  classSchedule,
-                  [],
-                  selectedDay,
-                  isToday,
-                ),
-                data: (penggantiEntries) => _buildDay(
-                  context,
-                  classCode,
-                  classSchedule,
-                  penggantiEntries,
-                  selectedDay,
-                  isToday,
-                ),
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
   }
 
   Widget _buildDay(
-    BuildContext context,
     String classCode,
     List<DaySchedule> classSchedule,
     List<PenggantiEntry> penggantiEntries,
@@ -297,85 +235,7 @@ class _TodayView extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Week view
-// ---------------------------------------------------------------------------
-
-class _WeekView extends ConsumerWidget {
-  const _WeekView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final classCode = ref.watch(selectedClassProvider);
-    final schedulesAsync = ref.watch(schedulesProvider);
-    final penggantiAsync = ref.watch(penggantiProvider);
-
-    return schedulesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Text(
-          'Gagal memuat jadwal',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-      ),
-      data: (schedulesResponse) {
-        final classData = schedulesResponse.classes.where(
-          (c) => c.className == classCode,
-        );
-        if (classData.isEmpty) {
-          return const Center(child: Text('Data kelas tidak ditemukan'));
-        }
-
-        final classSchedule = classData.first.schedule;
-
-        return penggantiAsync.when(
-          loading: () => _buildWeek(context, classCode, classSchedule, []),
-          error: (e, _) => _buildWeek(context, classCode, classSchedule, []),
-          data: (penggantiEntries) =>
-              _buildWeek(context, classCode, classSchedule, penggantiEntries),
-        );
-      },
-    );
-  }
-
-  Widget _buildWeek(
-    BuildContext context,
-    String classCode,
-    List<DaySchedule> classSchedule,
-    List<PenggantiEntry> penggantiEntries,
-  ) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    // Build a list of this week's weekdays (Mon–Fri).
-    final weekdayDates = <DateTime>[];
-    for (var i = 0; i < 5; i++) {
-      // Find Monday of this week.
-      final monday = today.subtract(Duration(days: today.weekday - 1));
-      weekdayDates.add(monday.add(Duration(days: i)));
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: weekdayDates.length,
-      itemBuilder: (context, index) {
-        final date = weekdayDates[index];
-        final isToday = date.isAtSameMomentAs(today);
-
-        final dayData = resolveDaySchedule(
-          classCode: classCode,
-          date: date,
-          classSchedule: classSchedule,
-          penggantiEntries: penggantiEntries,
-        );
-
-        return _WeekDaySection(dayData: dayData, date: date, isToday: isToday);
-      },
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Single day section (used in both today and week views)
+// Single day schedule list
 // ---------------------------------------------------------------------------
 
 class _DayScheduleList extends StatelessWidget {
@@ -440,6 +300,7 @@ class _DayScheduleList extends StatelessWidget {
     }
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: children,
     );
@@ -495,92 +356,6 @@ class _IstirahatGap extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Week day section
-// ---------------------------------------------------------------------------
-
-class _WeekDaySection extends StatelessWidget {
-  const _WeekDaySection({
-    required this.dayData,
-    required this.date,
-    required this.isToday,
-  });
-
-  final DayScheduleData dayData;
-  final DateTime date;
-  final bool isToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final dayName = dayData.day.label;
-
-    // Format the date as Indonesian style.
-    final dateStr = _formatDateIndonesian(date);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Day header.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Row(
-            children: [
-              Text(
-                '$dayName$dateStr',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              if (isToday) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Hari Ini',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        // Pengganti banner.
-        if (dayData.penggantiNote != null)
-          _PenggantiBanner(note: dayData.penggantiNote!),
-        // Sessions or empty state.
-        if (dayData.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            child: Text(
-              'Tidak ada jadwal',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-            ),
-          )
-        else
-          ...dayData.mergedSessions.map((session) {
-            final isActive = isSessionActive(session, now) && isToday;
-            return _SessionCard(session: session, isActive: isActive);
-          }),
-        const Divider(height: 1),
-      ],
     );
   }
 }
@@ -945,23 +720,3 @@ class _PenggantiBanner extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/// Format a DateTime as Indonesian date string, e.g. " — 15 September 2026".
-String _formatDateIndonesian(DateTime date) {
-  const months = [
-    '',
-    'Januari',
-    'Februari',
-    'Maret',
-    'April',
-    'Mei',
-    'Juni',
-    'Juli',
-    'Agustus',
-    'September',
-    'Oktober',
-    'November',
-    'Desember',
-  ];
-  return ' — ${date.day} ${months[date.month]} ${date.year}';
-}
