@@ -749,6 +749,7 @@ class _SessionFormSheetState extends ConsumerState<_SessionFormSheet> {
   late final TextEditingController _lecturerCodeController;
   late final TextEditingController _lecturerController;
   late final TextEditingController _roomController;
+  late final TextEditingController _modeController;
   bool _isLoading = false;
 
   bool get _isEditing => widget.existing != null;
@@ -777,6 +778,7 @@ class _SessionFormSheetState extends ConsumerState<_SessionFormSheet> {
     );
     _lecturerController = TextEditingController(text: existing?.lecturer ?? '');
     _roomController = TextEditingController(text: existing?.room ?? '');
+    _modeController = TextEditingController(text: existing?.mode ?? 'offline');
   }
 
   @override
@@ -791,6 +793,7 @@ class _SessionFormSheetState extends ConsumerState<_SessionFormSheet> {
     _lecturerCodeController.dispose();
     _lecturerController.dispose();
     _roomController.dispose();
+    _modeController.dispose();
     super.dispose();
   }
 
@@ -973,6 +976,28 @@ class _SessionFormSheetState extends ConsumerState<_SessionFormSheet> {
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Mode (offline/online).
+                  DropdownButtonFormField<String>(
+                    initialValue: _modeController.text.isNotEmpty
+                        ? _modeController.text
+                        : 'offline',
+                    decoration: const InputDecoration(
+                      labelText: 'Mode',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'offline',
+                        child: Text('Offline'),
+                      ),
+                      DropdownMenuItem(value: 'online', child: Text('Online')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) _modeController.text = v;
+                    },
                   ),
                   const SizedBox(height: 24),
 

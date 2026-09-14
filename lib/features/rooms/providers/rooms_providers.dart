@@ -74,14 +74,58 @@ final filteredRoomsProvider = Provider<List<Room>>((ref) {
 // Occupancy matrix
 // ---------------------------------------------------------------------------
 
-/// The full occupancy matrix built from all class schedules.
+/// The full occupancy matrix built from all class schedules + pengganti overrides.
 final occupancyMatrixProvider = Provider<OccupancyMatrix>((ref) {
   final schedulesAsync = ref.watch(schedulesProvider);
+  final penggantiAsync = ref.watch(penggantiProvider);
 
   return schedulesAsync.when(
     loading: () => <String, Map<Day, Map<int, List<SessionOccupancy>>>>{},
     error: (_, _) => <String, Map<Day, Map<int, List<SessionOccupancy>>>>{},
-    data: (response) => buildOccupancyMatrix(response.classes),
+    data: (response) {
+      var matrix = buildOccupancyMatrix(response.classes);
+
+      penggantiAsync.when(
+        loading: () {},
+        error: (_, _) {},
+        data: (entries) {
+          if (entries.isEmpty) return;
+          final now = DateTime.now();
+          final wibNow = now.toUtc().add(const Duration(hours: 7));
+          final monday = DateTime(
+            wibNow.year,
+            wibNow.month,
+            wibNow.day - (wibNow.weekday - 1),
+          );
+          for (var i = 0; i < 5; i++) {
+            final date = DateTime(monday.year, monday.month, monday.day + i);
+            matrix = applyPenggantiToDate(
+              matrix,
+              entries,
+              response.classes,
+              date,
+            );
+          }
+        },
+      );
+
+      return matrix;
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Pengganti-affected cells indicator
+// ---------------------------------------------------------------------------
+
+/// Set of (roomId, Day, slotIndex) tuples affected by pengganti in the current week.
+final penggantiCellsProvider = Provider<Set<(String, Day, int)>>((ref) {
+  final penggantiAsync = ref.watch(penggantiProvider);
+
+  return penggantiAsync.when(
+    loading: () => <(String, Day, int)>{},
+    error: (_, _) => <(String, Day, int)>{},
+    data: (entries) => computePenggantiCells(entries),
   );
 });
 

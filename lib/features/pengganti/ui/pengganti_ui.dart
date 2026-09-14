@@ -93,6 +93,17 @@ class _PenggantiTile extends StatelessWidget {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
+            if (entry.sessions.any((s) => s.mode != null)) ...[
+              const SizedBox(height: 2),
+              Wrap(
+                spacing: 4,
+                runSpacing: 2,
+                children: entry.sessions
+                    .where((s) => s.mode != null)
+                    .map((s) => _ModeBadge(mode: s.mode))
+                    .toList(),
+              ),
+            ],
             if (entry.note != null && entry.note!.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(
@@ -202,7 +213,14 @@ class _PenggantiDetailSheet extends StatelessWidget {
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   title: Text('${s.courseCode} — ${s.courseName}'),
-                  subtitle: Text('${s.time} · ${s.room} · ${s.lecturer}'),
+                  subtitle: Row(
+                    children: [
+                      Expanded(
+                        child: Text('${s.time} · ${s.room} · ${s.lecturer}'),
+                      ),
+                      _ModeBadge(mode: s.mode),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -218,4 +236,47 @@ class _PenggantiDetailSheet extends StatelessWidget {
     PenggantiKind.add => 'Tambah Jadwal',
     PenggantiKind.info => 'Info',
   };
+}
+
+// ---------------------------------------------------------------------------
+// Mode badge (offline / online)
+// ---------------------------------------------------------------------------
+
+class _ModeBadge extends StatelessWidget {
+  const _ModeBadge({required this.mode});
+
+  final String? mode;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveMode = mode ?? 'offline';
+    final isOnline = effectiveMode == 'online';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isOnline ? Colors.blue.shade50 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isOnline ? Icons.wifi : Icons.school,
+            size: 12,
+            color: isOnline ? Colors.blue.shade700 : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            isOnline ? 'Online' : 'Offline',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: isOnline ? Colors.blue.shade700 : Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

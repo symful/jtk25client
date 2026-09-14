@@ -26,12 +26,14 @@ Future<void> _onRefreshRooms(BuildContext context, WidgetRef ref) async {
   await refreshData(
     context,
     ref,
-    keys: [CacheKey.rooms, CacheKey.schedules],
+    keys: [CacheKey.rooms, CacheKey.schedules, CacheKey.pengganti],
     refresh: () async {
       ref.invalidate(roomsProvider);
       ref.invalidate(schedulesProvider);
+      ref.invalidate(penggantiProvider);
       await ref.read(roomsProvider.future);
       await ref.read(schedulesProvider.future);
+      await ref.read(penggantiProvider.future);
     },
   );
 }
@@ -553,6 +555,7 @@ class _MatrixList extends ConsumerWidget {
     final now = DateTime.now();
     final highlightDay = showAvailableOnly ? currentWorkDay(now) : null;
     final highlightSlot = showAvailableOnly ? currentSlotIndex(now) : null;
+    final penggantiCells = ref.watch(penggantiCellsProvider);
 
     // Filter rooms if "Tersedia sekarang" is active.
     final displayRooms = showAvailableOnly
@@ -590,6 +593,7 @@ class _MatrixList extends ConsumerWidget {
                   child: _RoomMatrix(
                     room: room,
                     matrix: matrix,
+                    penggantiCells: penggantiCells,
                     highlightDay: highlightDay,
                     highlightSlot: highlightSlot,
                   ),
@@ -611,12 +615,14 @@ class _RoomMatrix extends StatelessWidget {
   const _RoomMatrix({
     required this.room,
     required this.matrix,
+    required this.penggantiCells,
     this.highlightDay,
     this.highlightSlot,
   });
 
   final Room room;
   final OccupancyMatrix matrix;
+  final Set<(String, Day, int)> penggantiCells;
   final Day? highlightDay;
   final int? highlightSlot;
 
@@ -719,6 +725,7 @@ class _RoomMatrix extends StatelessWidget {
                     day: day,
                     slotIndex: si,
                   ),
+                  isPengganti: penggantiCells.contains((room.extId, day, si)),
                   isHighlighted: highlightDay == day && highlightSlot == si,
                   cellWidth: cellW,
                   cellHeight: cellH,
@@ -745,12 +752,14 @@ String _compactSlotLabel(String slot) {
 class _MatrixCell extends StatelessWidget {
   const _MatrixCell({
     required this.occupancies,
+    required this.isPengganti,
     required this.isHighlighted,
     required this.cellWidth,
     required this.cellHeight,
   });
 
   final List<SessionOccupancy> occupancies;
+  final bool isPengganti;
   final bool isHighlighted;
   final double cellWidth;
   final double cellHeight;
@@ -758,10 +767,14 @@ class _MatrixCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final occupied = occupancies.isNotEmpty;
-    final Color bgColor = occupied
+    final Color bgColor = isPengganti
+        ? (isHighlighted ? Colors.amber.shade200 : Colors.amber.shade50)
+        : occupied
         ? (isHighlighted ? Colors.red.shade200 : Colors.red.shade50)
         : (isHighlighted ? Colors.green.shade200 : Colors.green.shade50);
-    final Color borderColor = occupied
+    final Color borderColor = isPengganti
+        ? Colors.amber.shade300
+        : occupied
         ? Colors.red.shade300
         : Colors.green.shade300;
 
@@ -780,10 +793,10 @@ class _MatrixCell extends StatelessWidget {
           child: occupied
               ? Text(
                   occupancies.first.courseCode,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 8,
                     fontWeight: FontWeight.w600,
-                    color: Colors.red,
+                    color: isPengganti ? Colors.amber.shade700 : Colors.red,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -889,6 +902,12 @@ class _MatrixLegend extends StatelessWidget {
             color: Colors.red.shade100,
             border: Colors.red.shade300,
             label: 'Terpakai',
+          ),
+          const SizedBox(width: 16),
+          _LegendItem(
+            color: Colors.amber.shade100,
+            border: Colors.amber.shade300,
+            label: 'Pengganti',
           ),
         ],
       ),

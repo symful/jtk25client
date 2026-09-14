@@ -373,6 +373,42 @@ String _formatDate(DateTime date) {
 }
 
 // ---------------------------------------------------------------------------
+// Pengganti-affected cell indicator
+// ---------------------------------------------------------------------------
+
+/// Compute the set of (roomId, Day, slotIndex) tuples affected by pengganti
+/// in the current week. Used to visually distinguish pengganti-modified cells.
+Set<(String, Day, int)> computePenggantiCells(List<PenggantiEntry> entries) {
+  final cells = <(String, Day, int)>{};
+  final now = DateTime.now();
+  final wibNow = now.toUtc().add(const Duration(hours: 7));
+  final monday = DateTime(
+    wibNow.year,
+    wibNow.month,
+    wibNow.day - (wibNow.weekday - 1),
+  );
+
+  for (var i = 0; i < 5; i++) {
+    final date = DateTime(monday.year, monday.month, monday.day + i);
+    final day = Day.values[i];
+    final dateStr = _formatDate(date);
+    final dayEntries = entries.where((e) => e.date == dateStr);
+
+    for (final entry in dayEntries) {
+      if (entry.kind == PenggantiKind.info) continue;
+      for (final session in entry.sessions) {
+        final slotIndices = _findOverlappingSlots(session.time);
+        for (final si in slotIndices) {
+          cells.add((session.room, day, si));
+        }
+      }
+    }
+  }
+
+  return cells;
+}
+
+// ---------------------------------------------------------------------------
 // Room sessions — for detail view
 // ---------------------------------------------------------------------------
 

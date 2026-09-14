@@ -1,4 +1,4 @@
-/// Schedule feature UI — day-chip navigation with pengganti overlay.
+/// Schedule feature UI — day-chip navigation with session cards.
 ///
 /// Displays class schedules with day chips for navigation, session cards,
 /// merged consecutive slots, "Now" indicator, and pengganti banner.
@@ -13,7 +13,6 @@ import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/ui/refresh_helpers.dart';
 import '../../../core/utils/time_slot.dart';
-import '../../pengganti/providers/pengganti_providers.dart';
 import '../../settings/data/settings_data.dart';
 import '../providers/schedule_providers.dart';
 
@@ -109,7 +108,6 @@ class _DayChipsRow extends ConsumerWidget {
     final selectedDay = ref.watch(selectedDayProvider);
     final classCode = ref.watch(viewedClassProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
-    final showingPengganti = ref.watch(showingPenggantiProvider);
 
     final daysWithSessions = schedulesAsync.whenOrNull(
       data: (schedulesResponse) {
@@ -133,25 +131,14 @@ class _DayChipsRow extends ConsumerWidget {
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         scrollDirection: Axis.horizontal,
-        itemCount: daysWithSessions.length + 1, // +1 for Pengganti chip
+        itemCount: daysWithSessions.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, index) {
-          // Last item is the "Pengganti" chip.
-          if (index == daysWithSessions.length) {
-            return ChoiceChip(
-              label: const Text('Pengganti'),
-              selected: showingPengganti,
-              onSelected: (_) {
-                ref.read(showingPenggantiProvider.notifier).showPengganti();
-              },
-            );
-          }
           final day = daysWithSessions[index];
           return ChoiceChip(
             label: Text(_dayLabel(day)),
-            selected: day == selectedDay && !showingPengganti,
+            selected: day == selectedDay,
             onSelected: (_) {
-              ref.read(showingPenggantiProvider.notifier).showSchedule();
               ref.read(selectedDayProvider.notifier).selectDay(day);
             },
           );
@@ -184,32 +171,7 @@ class _ScheduleContent extends ConsumerWidget {
     final selectedDay = ref.watch(selectedDayProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
     final penggantiAsync = ref.watch(penggantiProvider);
-    final showingPengganti = ref.watch(showingPenggantiProvider);
     final isToday = isSelectedDayToday(selectedDay);
-
-    // When "Pengganti" chip is selected, show the pengganti list.
-    if (showingPengganti) {
-      final entries = ref.watch(classPenggantiProvider(classCode));
-      return RefreshIndicator(
-        onRefresh: () => _onRefreshSchedule(context, ref),
-        child: entries.isEmpty
-            ? const Center(
-                child: Text(
-                  'Tidak ada jadwal pengganti',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: entries.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 4),
-                itemBuilder: (context, index) {
-                  final entry = entries[index];
-                  return _PenggantiTile(entry: entry);
-                },
-              ),
-      );
-    }
 
     return schedulesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -753,164 +715,6 @@ class _PenggantiBanner extends StatelessWidget {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// Pengganti tile (for inline pengganti list)
-// ---------------------------------------------------------------------------
-
-class _PenggantiTile extends StatelessWidget {
-  const _PenggantiTile({required this.entry});
-
-  final PenggantiEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final (color, icon, kindLabel) = switch (entry.kind) {
-      PenggantiKind.replace => (
-        Colors.orange.shade50,
-        Icons.swap_horiz,
-        'Ganti',
-      ),
-      PenggantiKind.add => (
-        Colors.blue.shade50,
-        Icons.add_circle_outline,
-        'Tambah',
-      ),
-      PenggantiKind.info => (Colors.grey.shade100, Icons.info_outline, 'Info'),
-    };
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: colorScheme.onSurface, size: 20),
-        ),
-        title: Text(entry.date, style: Theme.of(context).textTheme.titleSmall),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 2),
-            Text(
-              kindLabel,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (entry.note != null && entry.note!.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                entry.note!,
-                style: Theme.of(context).textTheme.bodySmall,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ],
-        ),
-        trailing: entry.sessions.isNotEmpty
-            ? Chip(
-                label: Text(
-                  '${entry.sessions.length} sesi',
-                  style: const TextStyle(fontSize: 11),
-                ),
-              )
-            : null,
-        onTap: () => _showPenggantiDetail(context, entry),
-      ),
-    );
-  }
-
-  void _showPenggantiDetail(BuildContext context, PenggantiEntry entry) {
-    final colorScheme = Theme.of(context).colorScheme;
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: switch (entry.kind) {
-                    PenggantiKind.replace => Colors.orange.shade50,
-                    PenggantiKind.add => Colors.blue.shade50,
-                    PenggantiKind.info => Colors.grey.shade100,
-                  },
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  _kindLabel(entry.kind),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                entry.date,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Kelas: ${entry.classCode}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              if (entry.note != null && entry.note!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(entry.note!, style: Theme.of(context).textTheme.bodyLarge),
-              ],
-              if (entry.sessions.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'Sesi (${entry.sessions.length})',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 8),
-                ...entry.sessions.map(
-                  (s) => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('${s.courseCode} — ${s.courseName}'),
-                    subtitle: Text('${s.time} · ${s.room} · ${s.lecturer}'),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _kindLabel(PenggantiKind kind) => switch (kind) {
-    PenggantiKind.replace => 'Ganti Jadwal',
-    PenggantiKind.add => 'Tambah Jadwal',
-    PenggantiKind.info => 'Info',
-  };
 }
 
 // ---------------------------------------------------------------------------

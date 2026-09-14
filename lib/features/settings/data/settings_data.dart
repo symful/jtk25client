@@ -16,6 +16,9 @@ class SettingsKeys {
 
   /// Last-seen data version (for notification dedup).
   static const String lastDataVersion = 'notification_last_data_version';
+
+  /// Theme mode preference: 'light', 'dark', or 'system'.
+  static const String themeMode = 'theme_mode';
 }
 
 /// All known class codes in the app.

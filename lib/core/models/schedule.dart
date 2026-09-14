@@ -57,6 +57,7 @@ class Session {
     required this.lecturerCode,
     required this.lecturer,
     required this.room,
+    this.mode,
   });
 
   /// Raw dot-time string, e.g. "07.00-07.50" or "07.00-12.20".
@@ -79,6 +80,9 @@ class Session {
 
   /// Room identifier, e.g. "D108-Kelas".
   final String room;
+
+  /// Offline/online mode. Null defaults to 'offline'.
+  final String? mode;
 
   /// Split multi-lecturer code string into individual trimmed codes.
   List<String> get lecturerCodes => lecturerCode
@@ -103,6 +107,7 @@ class Session {
       lecturerCode: json['lecturer_code'] as String,
       lecturer: json['lecturer'] as String,
       room: json['room'] as String,
+      mode: json['mode'] as String?,
     );
   }
 
@@ -123,6 +128,7 @@ class Session {
     'lecturer_code': lecturerCode,
     'lecturer': lecturer,
     'room': room,
+    if (mode != null) 'mode': mode,
   };
 }
 

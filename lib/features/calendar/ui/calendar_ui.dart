@@ -1,4 +1,4 @@
-/// Calendar feature UI — month-view calendar grid with event indicators.
+/// Calendar feature UI — month-view calendar grid with event and pengganti indicators.
 library;
 
 import 'package:flutter/material.dart';
@@ -8,19 +8,28 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/calendar.dart';
+import '../../../core/models/pengganti.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/ui/refresh_helpers.dart';
+import '../../schedule/providers/schedule_providers.dart';
 import '../data/calendar_data.dart';
 
 // ---------------------------------------------------------------------------
-// Calendar page
+// Calendar item — wraps either a calendar event or a pengganti entry
 // ---------------------------------------------------------------------------
 
-/// A single item on the calendar grid: a campus [JtkCalendar] event.
-class _CalendarItem {
-  const _CalendarItem(this.event);
+sealed class _CalendarItem {
+  const _CalendarItem();
+}
 
+class _CalendarEventItem extends _CalendarItem {
+  const _CalendarEventItem(this.event);
   final JtkCalendar event;
+}
+
+class _CalendarPenggantiItem extends _CalendarItem {
+  const _CalendarPenggantiItem(this.entry);
+  final PenggantiEntry entry;
 }
 
 // ---------------------------------------------------------------------------
@@ -35,7 +44,9 @@ Future<void> _onRefreshCalendar(BuildContext context, WidgetRef ref) async {
     endpoints: ['/api/v1/calendar'],
     refresh: () async {
       ref.invalidate(calendarProvider);
+      ref.invalidate(penggantiProvider);
       await ref.read(calendarProvider.future);
+      await ref.read(penggantiProvider.future);
     },
   );
 }
@@ -124,6 +135,9 @@ class _CalendarBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final classCode = ref.watch(viewedClassProvider);
+    final penggantiAsync = ref.watch(penggantiProvider);
+
     final dateMap = <DateTime, List<_CalendarItem>>{};
 
     // Always add campus events.
@@ -131,7 +145,7 @@ class _CalendarBody extends ConsumerWidget {
       final eventDate = DateTime.tryParse(event.date);
       if (eventDate != null) {
         final key = DateTime(eventDate.year, eventDate.month, eventDate.day);
-        dateMap.putIfAbsent(key, () => []).add(_CalendarItem(event));
+        dateMap.putIfAbsent(key, () => []).add(_CalendarEventItem(event));
       }
       final endDate = DateTime.tryParse(event.endDate);
       // Only add to end-date slot if it's a different day (not just different time).
@@ -141,9 +155,20 @@ class _CalendarBody extends ConsumerWidget {
               endDate.month == eventDate.month &&
               endDate.day == eventDate.day)) {
         final key = DateTime(endDate.year, endDate.month, endDate.day);
-        dateMap.putIfAbsent(key, () => []).add(_CalendarItem(event));
+        dateMap.putIfAbsent(key, () => []).add(_CalendarEventItem(event));
       }
     }
+
+    // Merge pengganti entries into dateMap, filtered by viewed class.
+    penggantiAsync.whenData((entries) {
+      for (final entry in entries) {
+        if (entry.classCode != classCode) continue;
+        final entryDate = DateTime.tryParse(entry.date);
+        if (entryDate == null) continue;
+        final key = DateTime(entryDate.year, entryDate.month, entryDate.day);
+        dateMap.putIfAbsent(key, () => []).add(_CalendarPenggantiItem(entry));
+      }
+    });
 
     final selectedItems = selectedDate != null
         ? dateMap[DateTime(
@@ -307,7 +332,11 @@ class _CalendarGrid extends StatelessWidget {
               final key = DateTime(date.year, date.month, date.day);
               final items = dateMap[key];
               final hasItems = items != null && items.isNotEmpty;
-              final dotCount = hasItems ? items.length : 0;
+              final eventCount = hasItems
+                  ? items.where((i) => i is _CalendarEventItem).length
+                  : 0;
+              final hasPengganti =
+                  hasItems && items.any((i) => i is _CalendarPenggantiItem);
 
               return Expanded(
                 child: GestureDetector(
@@ -347,9 +376,21 @@ class _CalendarGrid extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              if (hasPengganti)
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 1,
+                                  ),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                               for (
                                 var i = 0;
-                                i < (dotCount > 3 ? 3 : dotCount);
+                                i < (eventCount > 2 ? 2 : eventCount);
                                 i++
                               )
                                 Container(
@@ -421,14 +462,17 @@ class _EventListForDate extends StatelessWidget {
       itemCount: items!.length,
       itemBuilder: (context, index) {
         final item = items![index];
-        return _CalendarEventCard(event: item.event);
+        return switch (item) {
+          _CalendarEventItem(:final event) => _CalendarEventCard(event: event),
+          _CalendarPenggantiItem(:final entry) => _PenggantiCard(entry: entry),
+        };
       },
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Event card (same design as original but adapted for JtkCalendar)
+// Event card (campus calendar event)
 // ---------------------------------------------------------------------------
 
 class _CalendarEventCard extends StatelessWidget {
@@ -490,6 +534,111 @@ class _CalendarEventCard extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pengganti card (calendar integration)
+// ---------------------------------------------------------------------------
+
+class _PenggantiCard extends StatelessWidget {
+  const _PenggantiCard({required this.entry});
+
+  final PenggantiEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final (color, icon, kindLabel) = switch (entry.kind) {
+      PenggantiKind.replace => (
+        Colors.orange.shade50,
+        Icons.swap_horiz,
+        'Ganti',
+      ),
+      PenggantiKind.add => (
+        Colors.blue.shade50,
+        Icons.add_circle_outline,
+        'Tambah',
+      ),
+      PenggantiKind.info => (Colors.grey.shade100, Icons.info_outline, 'Info'),
+    };
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            left: BorderSide(
+              color: switch (entry.kind) {
+                PenggantiKind.replace => Colors.orange,
+                PenggantiKind.add => Colors.blue,
+                PenggantiKind.info => Colors.grey,
+              },
+              width: 4,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 18, color: colorScheme.onSurface),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      kindLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: switch (entry.kind) {
+                          PenggantiKind.replace => Colors.orange.shade800,
+                          PenggantiKind.add => Colors.blue.shade800,
+                          PenggantiKind.info => Colors.grey.shade700,
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entry.classCode,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                  if (entry.sessions.isNotEmpty)
+                    Chip(
+                      label: Text(
+                        '${entry.sessions.length} sesi',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                ],
+              ),
+              if (entry.note != null && entry.note!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  entry.note!,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

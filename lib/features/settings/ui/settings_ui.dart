@@ -1,6 +1,6 @@
 /// Settings feature UI — pengaturan aplikasi JTK25.
 ///
-/// Displays class selection and a single notification toggle.
+/// Displays class selection, theme toggle, and notification toggle.
 /// All strings in Bahasa Indonesia.
 library;
 
@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/notifications/notification_providers.dart';
 import '../../schedule/providers/schedule_providers.dart';
 import '../data/settings_data.dart';
+import '../providers/theme_provider.dart';
 
 /// Full settings page.
 class SettingsPage extends ConsumerWidget {
@@ -22,6 +23,9 @@ class SettingsPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('Pengaturan')),
       body: ListView(
         children: [
+          // Theme selection section.
+          const _ThemeSection(),
+          const Divider(),
           // Class selection section.
           const _ClassSelectionSection(),
           const Divider(),
@@ -30,6 +34,64 @@ class SettingsPage extends ConsumerWidget {
           const Divider(),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Theme selection section — Terang / Gelap / Sistem
+// ---------------------------------------------------------------------------
+
+class _ThemeSection extends ConsumerWidget {
+  const _ThemeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(themeModeProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            'Tema',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        RadioGroup<AppThemeMode>(
+          groupValue: current,
+          onChanged: (value) {
+            if (value != null) {
+              ref.read(themeModeProvider.notifier).setMode(value);
+            }
+          },
+          child: Column(
+            children: const [
+              RadioListTile<AppThemeMode>(
+                title: Text('Terang'),
+                subtitle: Text('Mode terang selalu aktif'),
+                value: AppThemeMode.light,
+                secondary: Icon(Icons.light_mode),
+              ),
+              RadioListTile<AppThemeMode>(
+                title: Text('Gelap'),
+                subtitle: Text('Mode gelap selalu aktif'),
+                value: AppThemeMode.dark,
+                secondary: Icon(Icons.dark_mode),
+              ),
+              RadioListTile<AppThemeMode>(
+                title: Text('Sistem'),
+                subtitle: Text('Ikuti pengaturan perangkat'),
+                value: AppThemeMode.system,
+                secondary: Icon(Icons.brightness_auto),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
