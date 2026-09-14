@@ -232,7 +232,7 @@ class _ScheduleContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final classCode = ref.watch(viewedClassProvider);
-    final selectedDay = day ?? ref.watch(selectedDayProvider);
+    final Day selectedDay = day ?? ref.watch(selectedDayProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
     final penggantiAsync = ref.watch(penggantiProvider);
     final isToday = isSelectedDayToday(selectedDay);
