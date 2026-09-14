@@ -35,12 +35,57 @@ Future<void> _onRefreshSchedule(BuildContext context, WidgetRef ref) async {
   );
 }
 
-/// Full-screen schedule page with class selector and day chips.
-class SchedulePage extends ConsumerWidget {
+/// Full-screen schedule page with class selector, day chips, and swipeable content.
+class SchedulePage extends ConsumerStatefulWidget {
   const SchedulePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SchedulePage> createState() => _SchedulePageState();
+}
+
+class _SchedulePageState extends ConsumerState<SchedulePage> {
+  PageController? _pageController;
+  String? _currentKey;
+
+  @override
+  void dispose() {
+    _pageController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedDay = ref.watch(selectedDayProvider);
+    final classCode = ref.watch(viewedClassProvider);
+    final schedulesAsync = ref.watch(schedulesProvider);
+
+    final daysWithSessions = schedulesAsync.whenOrNull(
+      data: (schedulesResponse) {
+        final classData = schedulesResponse.classes.where(
+          (c) => c.className == classCode,
+        );
+        if (classData.isEmpty) return <Day>[];
+        return classData.first.schedule
+            .where((ds) => ds.sessions.isNotEmpty)
+            .map((ds) => ds.day)
+            .toList();
+      },
+    );
+
+    final hasDays = daysWithSessions != null && daysWithSessions.isNotEmpty;
+    final effectiveDays = hasDays ? daysWithSessions! : <Day>[];
+
+    // Recreate page controller when available days change (class switch).
+    if (hasDays) {
+      final key = '$classCode-${effectiveDays.length}';
+      if (key != _currentKey) {
+        _currentKey = key;
+        final idx = effectiveDays.indexOf(selectedDay);
+        _pageController?.dispose();
+        _pageController = PageController(initialPage: idx >= 0 ? idx : 0);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jadwal'),
@@ -52,10 +97,41 @@ class SchedulePage extends ConsumerWidget {
         children: [
           // Class selector chips.
           const _ClassSelector(),
-          // Day chips (the navigation — no toggle).
-          const _DayChipsRow(),
-          // Schedule content.
-          const Expanded(child: _ScheduleContent()),
+          // Day chips (visual indicator — tap animates the PageView).
+          if (hasDays)
+            _DayChipsRow(
+              days: effectiveDays,
+              selectedDay: selectedDay,
+              onDaySelected: (day) {
+                final idx = effectiveDays.indexOf(day);
+                if (idx >= 0) {
+                  _pageController?.animateToPage(
+                    idx,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+            ),
+          // Swipeable schedule content.
+          Expanded(
+            child: hasDays
+                ? PageView.builder(
+                    controller: _pageController,
+                    clipBehavior: Clip.none,
+                    physics: const PageScrollPhysics(),
+                    itemCount: effectiveDays.length,
+                    onPageChanged: (index) {
+                      ref
+                          .read(selectedDayProvider.notifier)
+                          .selectDay(effectiveDays[index]);
+                    },
+                    itemBuilder: (context, index) {
+                      return _ScheduleContent(day: effectiveDays[index]);
+                    },
+                  )
+                : const _ScheduleContent(),
+          ),
         ],
       ),
     );
@@ -100,47 +176,32 @@ class _ClassSelector extends ConsumerWidget {
 // Day chips row
 // ---------------------------------------------------------------------------
 
-class _DayChipsRow extends ConsumerWidget {
-  const _DayChipsRow();
+class _DayChipsRow extends StatelessWidget {
+  const _DayChipsRow({
+    required this.days,
+    required this.selectedDay,
+    required this.onDaySelected,
+  });
+
+  final List<Day> days;
+  final Day selectedDay;
+  final ValueChanged<Day> onDaySelected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selectedDay = ref.watch(selectedDayProvider);
-    final classCode = ref.watch(viewedClassProvider);
-    final schedulesAsync = ref.watch(schedulesProvider);
-
-    final daysWithSessions = schedulesAsync.whenOrNull(
-      data: (schedulesResponse) {
-        final classData = schedulesResponse.classes.where(
-          (c) => c.className == classCode,
-        );
-        if (classData.isEmpty) return <Day>[];
-        return classData.first.schedule
-            .where((ds) => ds.sessions.isNotEmpty)
-            .map((ds) => ds.day)
-            .toList();
-      },
-    );
-
-    if (daysWithSessions == null || daysWithSessions.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
+  Widget build(BuildContext context) {
     return SizedBox(
       height: 48,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         scrollDirection: Axis.horizontal,
-        itemCount: daysWithSessions.length,
+        itemCount: days.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, index) {
-          final day = daysWithSessions[index];
+          final day = days[index];
           return ChoiceChip(
             label: Text(_dayLabel(day)),
             selected: day == selectedDay,
-            onSelected: (_) {
-              ref.read(selectedDayProvider.notifier).selectDay(day);
-            },
+            onSelected: (_) => onDaySelected(day),
           );
         },
       ),
@@ -163,12 +224,15 @@ class _DayChipsRow extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ScheduleContent extends ConsumerWidget {
-  const _ScheduleContent();
+  const _ScheduleContent({this.day});
+
+  /// If provided, show this specific day instead of watching the provider.
+  final Day? day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final classCode = ref.watch(viewedClassProvider);
-    final selectedDay = ref.watch(selectedDayProvider);
+    final selectedDay = day ?? ref.watch(selectedDayProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
     final penggantiAsync = ref.watch(penggantiProvider);
     final isToday = isSelectedDayToday(selectedDay);

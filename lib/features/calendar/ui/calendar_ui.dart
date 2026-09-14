@@ -51,6 +51,10 @@ Future<void> _onRefreshCalendar(BuildContext context, WidgetRef ref) async {
   );
 }
 
+/// Base month for PageView month navigation (10-year buffer).
+final _baseMonth = DateTime(DateTime.now().year - 10, DateTime.now().month);
+const _monthPageOffset = 120;
+
 /// Full-screen calendar page with month grid and event list below.
 ///
 /// Watches [calendarProvider] directly for loading/error/data.
@@ -64,11 +68,19 @@ class CalendarPage extends ConsumerStatefulWidget {
 class _CalendarPageState extends ConsumerState<CalendarPage> {
   late DateTime _currentMonth;
   DateTime? _selectedDate;
+  late final PageController _monthPageController;
 
   @override
   void initState() {
     super.initState();
     _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    _monthPageController = PageController(initialPage: _monthPageOffset);
+  }
+
+  @override
+  void dispose() {
+    _monthPageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -95,12 +107,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             events: allEvents,
             currentMonth: _currentMonth,
             selectedDate: _selectedDate,
-            onMonthChanged: (delta) {
+            monthPageController: _monthPageController,
+            onMonthChanged: (month) {
               setState(() {
-                _currentMonth = DateTime(
-                  _currentMonth.year,
-                  _currentMonth.month + delta,
-                );
+                _currentMonth = month;
                 _selectedDate = null;
               });
             },
@@ -123,6 +133,7 @@ class _CalendarBody extends ConsumerWidget {
     required this.events,
     required this.currentMonth,
     required this.selectedDate,
+    required this.monthPageController,
     required this.onMonthChanged,
     required this.onDateSelected,
   });
@@ -130,7 +141,8 @@ class _CalendarBody extends ConsumerWidget {
   final List<JtkCalendar> events;
   final DateTime currentMonth;
   final DateTime? selectedDate;
-  final ValueChanged<int> onMonthChanged;
+  final PageController monthPageController;
+  final ValueChanged<DateTime> onMonthChanged;
   final ValueChanged<DateTime> onDateSelected;
 
   @override
@@ -182,17 +194,35 @@ class _CalendarBody extends ConsumerWidget {
       children: [
         _MonthHeader(
           currentMonth: currentMonth,
-          onPrev: () => onMonthChanged(-1),
-          onNext: () => onMonthChanged(1),
+          onPrev: () => monthPageController.previousPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          ),
+          onNext: () => monthPageController.nextPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          ),
         ),
         const _WeekdayHeaders(),
         Expanded(
           flex: 3,
-          child: _CalendarGrid(
-            currentMonth: currentMonth,
-            dateMap: dateMap,
-            selectedDate: selectedDate,
-            onDateSelected: onDateSelected,
+          child: PageView.builder(
+            controller: monthPageController,
+            clipBehavior: Clip.none,
+            physics: const PageScrollPhysics(),
+            onPageChanged: (page) {
+              final month = DateTime(_baseMonth.year, _baseMonth.month + page);
+              onMonthChanged(month);
+            },
+            itemBuilder: (context, page) {
+              final month = DateTime(_baseMonth.year, _baseMonth.month + page);
+              return _CalendarGrid(
+                currentMonth: month,
+                dateMap: dateMap,
+                selectedDate: selectedDate,
+                onDateSelected: onDateSelected,
+              );
+            },
           ),
         ),
         const Divider(height: 1),

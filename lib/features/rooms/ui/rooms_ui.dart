@@ -42,11 +42,34 @@ Future<void> _onRefreshRooms(BuildContext context, WidgetRef ref) async {
 ///
 /// Watches [roomsProvider] and [schedulesProvider] directly for
 /// loading/error/data (same pattern as schedule_ui.dart).
-class RoomsListPage extends ConsumerWidget {
+class RoomsListPage extends ConsumerStatefulWidget {
   const RoomsListPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoomsListPage> createState() => _RoomsListPageState();
+}
+
+class _RoomsListPageState extends ConsumerState<RoomsListPage> {
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    final selectedDay = ref.read(selectedRoomDayProvider);
+    final initialIndex = kWorkdays.indexOf(selectedDay);
+    _pageController = PageController(
+      initialPage: initialIndex >= 0 ? initialIndex : 0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomsProvider);
 
     return Scaffold(
@@ -65,12 +88,21 @@ class RoomsListPage extends ConsumerWidget {
           ),
         ),
         data: (_) {
-          // Filtered room list from the sync derivation.
-          final filtered = ref.watch(filteredRoomsProvider);
           return Column(
             children: [
-              // Day chips.
-              const _RoomDayChipsRow(),
+              // Day chips (swipe indicator — tap animates the page).
+              _RoomDayChipsRow(
+                onDaySelected: (day) {
+                  final idx = kWorkdays.indexOf(day);
+                  if (idx >= 0) {
+                    _pageController.animateToPage(
+                      idx,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+              ),
               // Search bar.
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -92,32 +124,21 @@ class RoomsListPage extends ConsumerWidget {
               ),
               // Available count summary.
               const _DayAvailableBanner(),
-              // Room list.
+              // Swipeable room list.
               Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => _onRefreshRooms(context, ref),
-                  child: filtered.isEmpty
-                      ? ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: const [
-                            SizedBox(height: 100),
-                            Center(
-                              child: Text(
-                                'Tidak ada ruangan ditemukan',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ),
-                          ],
-                        )
-                      : ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            return _RoomListTile(room: filtered[index]);
-                          },
-                        ),
+                child: PageView.builder(
+                  controller: _pageController,
+                  clipBehavior: Clip.none,
+                  physics: const PageScrollPhysics(),
+                  itemCount: kWorkdays.length,
+                  onPageChanged: (index) {
+                    ref
+                        .read(selectedRoomDayProvider.notifier)
+                        .selectDay(kWorkdays[index]);
+                  },
+                  itemBuilder: (context, index) {
+                    return const _RoomDayList();
+                  },
                 ),
               ),
               // Matrix button.
@@ -145,7 +166,9 @@ class RoomsListPage extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _RoomDayChipsRow extends ConsumerWidget {
-  const _RoomDayChipsRow();
+  const _RoomDayChipsRow({required this.onDaySelected});
+
+  final ValueChanged<Day> onDaySelected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -163,9 +186,7 @@ class _RoomDayChipsRow extends ConsumerWidget {
           return ChoiceChip(
             label: Text(_dayLabel(day)),
             selected: day == selectedDay,
-            onSelected: (_) {
-              ref.read(selectedRoomDayProvider.notifier).selectDay(day);
-            },
+            onSelected: (_) => onDaySelected(day),
           );
         },
       ),
@@ -182,6 +203,45 @@ String _dayLabel(Day day) => switch (day) {
   Day.sabtu => 'Sabtu',
   Day.minggu => 'Minggu',
 };
+
+// ---------------------------------------------------------------------------
+// Day-specific room list (one PageView page)
+// ---------------------------------------------------------------------------
+
+class _RoomDayList extends ConsumerWidget {
+  const _RoomDayList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filtered = ref.watch(filteredRoomsProvider);
+
+    return RefreshIndicator(
+      onRefresh: () => _onRefreshRooms(context, ref),
+      child: filtered.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 100),
+                Center(
+                  child: Text(
+                    'Tidak ada ruangan ditemukan',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: filtered.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                return _RoomListTile(room: filtered[index]);
+              },
+            ),
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Day-specific availability banner
