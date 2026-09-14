@@ -88,7 +88,7 @@ class AppShell extends ConsumerWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
-        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11)),
+        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 10)),
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.schedule_outlined),
