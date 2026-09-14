@@ -19,6 +19,15 @@ enum AppThemeMode {
   dark,
 }
 
+/// Extension to convert [AppThemeMode] to Flutter's [ThemeMode].
+extension AppThemeModeExtension on AppThemeMode {
+  ThemeMode get flutterThemeMode => switch (this) {
+    AppThemeMode.light => ThemeMode.light,
+    AppThemeMode.dark => ThemeMode.dark,
+    AppThemeMode.system => ThemeMode.system,
+  };
+}
+
 /// Notifier that manages theme mode persistence and state.
 class ThemeModeNotifier extends Notifier<AppThemeMode> {
   @override
@@ -35,18 +44,6 @@ class ThemeModeNotifier extends Notifier<AppThemeMode> {
   void setMode(AppThemeMode mode) {
     Hive.box(kSettingsBoxName).put(SettingsKeys.themeMode, mode.name);
     state = mode;
-  }
-
-  /// Convert AppThemeMode to Flutter's ThemeMode for MaterialApp.
-  ThemeMode get flutterThemeMode {
-    switch (state) {
-      case AppThemeMode.light:
-        return ThemeMode.light;
-      case AppThemeMode.dark:
-        return ThemeMode.dark;
-      case AppThemeMode.system:
-        return ThemeMode.system;
-    }
   }
 }
 
