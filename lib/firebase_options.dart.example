@@ -1,0 +1,46 @@
+/// Firebase configuration for JTK25 client.
+///
+/// Hand-written from Firebase console config (flutterfire configure not used).
+/// This file provides platform-specific Firebase options via
+/// [DefaultFirebaseOptions].
+library;
+
+import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
+
+/// Default [FirebaseOptions] for use with Firebase apps.
+///
+/// To regenerate this file, run `flutterfire configure --project=YOUR_PROJECT_ID`.
+class DefaultFirebaseOptions {
+  static FirebaseOptions get currentPlatform {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return android;
+      default:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not configured for this platform.',
+        );
+    }
+  }
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'YOUR_ANDROID_API_KEY',
+    appId: '1:YOUR_PROJECT_NUMBER:android:YOUR_APP_HASH',
+    messagingSenderId: 'YOUR_PROJECT_NUMBER',
+    projectId: 'YOUR_PROJECT_ID',
+    databaseURL: 'https://YOUR_PROJECT_ID.firebaseio.com',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'YOUR_WEB_API_KEY',
+    appId: '1:YOUR_PROJECT_NUMBER:web:YOUR_WEB_APP_HASH',
+    messagingSenderId: 'YOUR_PROJECT_NUMBER',
+    projectId: 'YOUR_PROJECT_ID',
+    databaseURL: 'https://YOUR_PROJECT_ID.firebaseio.com',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+    measurementId: 'YOUR_MEASUREMENT_ID',
+  );
+}

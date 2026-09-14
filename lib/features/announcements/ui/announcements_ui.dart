@@ -1,0 +1,193 @@
+/// Announcements feature UI — list + detail pages.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/models/announcement.dart';
+import '../../../core/providers/providers.dart';
+import '../../../core/ui/refresh_helpers.dart';
+import '../providers/announcements_providers.dart';
+
+// ---------------------------------------------------------------------------
+// Announcements list page
+// ---------------------------------------------------------------------------
+
+/// Refresh announcements: invalidate provider → await → change detection.
+Future<void> _onRefreshAnnouncements(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  await refreshData(
+    context,
+    ref,
+    endpoints: ['/api/v1/announcements'],
+    refresh: () async {
+      ref.invalidate(announcementsProvider);
+      await ref.read(announcementsProvider.future);
+    },
+  );
+}
+
+/// Full-screen list of active announcements.
+///
+/// Watches [announcementsProvider] directly for loading/error/data
+/// (same pattern as schedule_ui.dart watches schedulesProvider).
+class AnnouncementsListPage extends ConsumerWidget {
+  const AnnouncementsListPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final announcementsAsync = ref.watch(announcementsProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pengumuman'),
+        actions: [
+          AppRefreshButton(
+            onRefresh: () => _onRefreshAnnouncements(context, ref),
+          ),
+        ],
+      ),
+      body: announcementsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Text(
+            'Gagal memuat pengumuman',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+        data: (_) {
+          // Filtered/sorted data comes from the sync derivation.
+          final items = ref.watch(filteredAnnouncementsProvider);
+          if (items.isEmpty) {
+            return const Center(child: Text('Belum ada pengumuman'));
+          }
+          return RefreshIndicator(
+            onRefresh: () => _onRefreshAnnouncements(context, ref),
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: items.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 4),
+              itemBuilder: (context, i) {
+                final a = items[i];
+                return _AnnouncementTile(announcement: a);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tile
+// ---------------------------------------------------------------------------
+
+class _AnnouncementTile extends ConsumerWidget {
+  const _AnnouncementTile({required this.announcement});
+
+  final Announcement announcement;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final seen = ref.watch(announcementsSeenProvider);
+    final isSeen = seen.hasSeen(announcement.id);
+
+    final dateStr = _formatDate(announcement.createdAt);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: !isSeen
+            ? const Badge(label: Text('Baru'))
+            : (announcement.pinned
+                  ? const Icon(Icons.push_pin, color: Colors.orange, size: 20)
+                  : null),
+        title: Text(
+          announcement.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            '$dateStr${announcement.pinned ? ' · Disematkan' : ''}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          // Mark as seen.
+          ref.read(announcementsSeenProvider).markSeen(announcement.id);
+          // Navigate to detail.
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  AnnouncementDetailPage(announcement: announcement),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Detail page (markdown body)
+// ---------------------------------------------------------------------------
+
+class AnnouncementDetailPage extends StatelessWidget {
+  const AnnouncementDetailPage({super.key, required this.announcement});
+
+  final Announcement announcement;
+
+  @override
+  Widget build(BuildContext context) {
+    final createdStr = _formatDate(announcement.createdAt);
+    final expiresStr = announcement.expiresAt != null
+        ? _formatDate(announcement.expiresAt!)
+        : null;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(announcement.title)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Metadata row.
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Chip(label: Text(createdStr)),
+              if (announcement.pinned)
+                const Chip(
+                  avatar: Icon(Icons.push_pin, size: 16),
+                  label: Text('Disematkan'),
+                ),
+              if (expiresStr != null)
+                Chip(label: Text('Berakhir: $expiresStr')),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Markdown body.
+          MarkdownBody(data: announcement.body),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+String _formatDate(String iso) {
+  final dt = DateTime.tryParse(iso);
+  if (dt == null) return iso;
+  return DateFormat('dd MMM yyyy', 'id').format(dt);
+}
