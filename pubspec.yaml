@@ -28,6 +28,7 @@ dependencies:
   package_info_plus: ^8.1.3
   web: ^1.1.1
   json_schema: ^5.2.2
+  google_fonts: ^6.3.2
 
 dependency_overrides:
   # Pin to 3.10.0 — 3.11.0 uses isA<JSObject>() which requires Dart 3.12+

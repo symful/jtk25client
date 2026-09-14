@@ -5,26 +5,31 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Brand blue matching app icon, manifest theme_color, and splash.
 const Color kBrandBlue = Color(0xFF3B72D9);
 
-/// Build the light Material 3 theme for JTK25.
 ThemeData buildJtk25Theme() {
-  return ThemeData(
+  final base = ThemeData(
     useMaterial3: true,
     colorSchemeSeed: kBrandBlue,
     brightness: Brightness.light,
-    fontFamily: 'Plus Jakarta Sans',
+  );
+
+  return base.copyWith(
+    textTheme: GoogleFonts.poppinsTextTheme(base.textTheme),
   );
 }
 
-/// Build the dark Material 3 theme for JTK25.
 ThemeData buildJtk25DarkTheme() {
-  return ThemeData(
+  final base = ThemeData(
     useMaterial3: true,
     colorSchemeSeed: kBrandBlue,
     brightness: Brightness.dark,
-    fontFamily: 'Plus Jakarta Sans',
+  );
+
+  return base.copyWith(
+    textTheme: GoogleFonts.poppinsTextTheme(base.textTheme),
   );
 }

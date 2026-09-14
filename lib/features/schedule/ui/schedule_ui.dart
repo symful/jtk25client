@@ -73,7 +73,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
 
     final hasDays = daysWithSessions != null && daysWithSessions.isNotEmpty;
-    final effectiveDays = hasDays ? daysWithSessions! : <Day>[];
+    final effectiveDays = hasDays ? daysWithSessions : <Day>[];
 
     // Recreate page controller when available days change (class switch).
     if (hasDays) {
