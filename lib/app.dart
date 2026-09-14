@@ -12,7 +12,7 @@ class Jtk25App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.watch(themeModeProvider.notifier);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'JTK25 Jadwal',
@@ -20,7 +20,7 @@ class Jtk25App extends ConsumerWidget {
       scaffoldMessengerKey: scaffoldMessengerKey,
       theme: buildJtk25Theme(),
       darkTheme: buildJtk25DarkTheme(),
-      themeMode: notifier.flutterThemeMode,
+      themeMode: themeMode.flutterThemeMode,
       routerConfig: createRouter(),
     );
   }
