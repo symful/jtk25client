@@ -150,6 +150,7 @@ class AdminScheduleSession {
     required this.lecturerCode,
     required this.lecturer,
     required this.room,
+    this.mode = 'offline',
   });
 
   final int? id;
@@ -160,6 +161,7 @@ class AdminScheduleSession {
   final String lecturerCode;
   final String lecturer;
   final String room;
+  final String mode;
 
   bool get hasId => id != null && id! > 0;
 
@@ -173,6 +175,7 @@ class AdminScheduleSession {
       lecturerCode: json['lecturer_code'] as String? ?? '',
       lecturer: json['lecturer'] as String? ?? '',
       room: json['room'] as String? ?? '',
+      mode: json['mode'] as String? ?? 'offline',
     );
   }
 }
@@ -296,6 +299,7 @@ class AdminApi {
     required String lecturer,
     required String room,
     int slotOrder = 0,
+    String mode = 'offline',
   }) async {
     debugLog('[AdminApi] POST /api/v1/admin/schedules');
     final resp = await _dio.post<Map<String, dynamic>>(
@@ -312,6 +316,7 @@ class AdminApi {
         'lecturer': lecturer,
         'room': room,
         'slot_order': slotOrder,
+        'mode': mode,
       },
     );
     if (resp.data?['ok'] == true) {
@@ -334,6 +339,7 @@ class AdminApi {
     required String lecturer,
     required String room,
     int slotOrder = 0,
+    String mode = 'offline',
   }) async {
     debugLog('[AdminApi] PUT /api/v1/admin/schedules/$id');
     final resp = await _dio.put<Map<String, dynamic>>(
@@ -350,6 +356,7 @@ class AdminApi {
         'lecturer': lecturer,
         'room': room,
         'slot_order': slotOrder,
+        'mode': mode,
       },
     );
     return resp.data?['ok'] == true;
