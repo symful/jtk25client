@@ -778,7 +778,7 @@ class _SessionFormSheetState extends ConsumerState<_SessionFormSheet> {
     );
     _lecturerController = TextEditingController(text: existing?.lecturer ?? '');
     _roomController = TextEditingController(text: existing?.room ?? '');
-    _modeController = TextEditingController(text: existing?.mode ?? 'offline');
+    _modeController = TextEditingController(text: 'offline');
   }
 
   @override
