@@ -152,7 +152,7 @@ class _ClassSelector extends ConsumerWidget {
     return SizedBox(
       height: 56,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         scrollDirection: Axis.horizontal,
         itemCount: kAllClassCodes.length,
         separatorBuilder: (_, idx) => const SizedBox(width: 8),
