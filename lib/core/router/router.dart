@@ -16,6 +16,7 @@ import '../../features/calendar/calendar.dart';
 import '../../features/rooms/rooms.dart';
 import '../../features/schedule/schedule.dart';
 import '../../features/settings/settings.dart';
+import '../../features/privacy/ui/privacy_ui.dart';
 import '../../features/settings/ui/notification_permission_screen.dart';
 
 import '../shell/not_found_page.dart';
@@ -112,6 +113,10 @@ GoRouter createRouter() {
                     path: 'notifikasi',
                     builder: (context, state) =>
                         const NotificationPermissionScreen(),
+                  ),
+                  GoRoute(
+                    path: 'privasi',
+                    builder: (context, state) => const PrivacyPage(),
                   ),
                 ],
               ),

@@ -152,7 +152,7 @@ class _ClassSelector extends ConsumerWidget {
     return SizedBox(
       height: 56,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
         scrollDirection: Axis.horizontal,
         itemCount: kAllClassCodes.length,
         separatorBuilder: (_, idx) => const SizedBox(width: 8),
@@ -160,7 +160,10 @@ class _ClassSelector extends ConsumerWidget {
           final code = kAllClassCodes[index];
           final isSelected = code == viewed;
           return ChoiceChip(
-            label: Text(classLabel(code)),
+            label: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(classLabel(code)),
+            ),
             selected: isSelected,
             onSelected: (_) {
               ref.read(viewedClassProvider.notifier).select(code);
@@ -192,7 +195,7 @@ class _DayChipsRow extends StatelessWidget {
     return SizedBox(
       height: 48,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         scrollDirection: Axis.horizontal,
         itemCount: days.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),

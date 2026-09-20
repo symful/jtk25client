@@ -59,6 +59,22 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     const initSettings = InitializationSettings(android: androidSettings);
     await plugin.initialize(settings: initSettings);
 
+    // Create the notification channel in the background isolate.
+    // Android 8+ requires a channel to display notifications.
+    final androidPlugin = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (androidPlugin != null) {
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          kNotificationChannelId,
+          kNotificationChannelName,
+          description: kNotificationChannelDesc,
+        ),
+      );
+    }
+
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
         kNotificationChannelId,
