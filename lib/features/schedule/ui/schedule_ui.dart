@@ -150,9 +150,9 @@ class _ClassSelector extends ConsumerWidget {
     final viewed = ref.watch(viewedClassProvider);
 
     return SizedBox(
-      height: 56,
+      height: 64,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         scrollDirection: Axis.horizontal,
         itemCount: kAllClassCodes.length,
         separatorBuilder: (_, idx) => const SizedBox(width: 8),
@@ -160,10 +160,7 @@ class _ClassSelector extends ConsumerWidget {
           final code = kAllClassCodes[index];
           final isSelected = code == viewed;
           return ChoiceChip(
-            label: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(classLabel(code)),
-            ),
+            label: Text(classLabel(code), overflow: TextOverflow.visible),
             selected: isSelected,
             onSelected: (_) {
               ref.read(viewedClassProvider.notifier).select(code);
