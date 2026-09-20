@@ -99,11 +99,8 @@ class PrivacyPage extends StatelessWidget {
             title: 'Kontak',
             body:
                 'Jika Anda memiliki pertanyaan mengenai Kebijakan Privasi '
-                'ini, silakan hubungi:\n\n'
-                'Program Studi Teknik Komputer dan Informatika\n'
-                'Politeknik Negeri Bandung\n'
-                'Jl. Gegerkalong Hilir, Ciwaruga, Kec. Parongpong, '
-                'Kabupaten Bandung Barat, Jawa Barat 40559',
+                'ini, silakan hubungi melalui:\n\n'
+                'Email: kemalardian17@gmail.com',
           ),
         ],
       ),
