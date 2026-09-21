@@ -24,7 +24,7 @@ class Room {
   const Room({required this.id, required this.name, this.type, String? extId})
     : extId = extId ?? id;
 
-  /// Database primary key (D1 integer or legacy string).
+  /// Database primary key (D1 integer).
   final String id;
 
   /// Room identifier matching schedule data (e.g. "D108-Kelas").
@@ -34,17 +34,10 @@ class Room {
   final String name;
   final RoomType? type;
 
-  /// Parse id from D1 (int) or legacy format (String).
-  static String _parseId(dynamic value) {
-    if (value is int) return value.toString();
-    if (value is String) return value;
-    return '';
-  }
-
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
-      id: _parseId(json['id']),
-      extId: json['ext_id'] as String? ?? _parseId(json['id']),
+      id: (json['id'] as int).toString(),
+      extId: json['ext_id'] as String? ?? (json['id'] as int).toString(),
       name: json['name'] as String,
       type: json['type'] != null
           ? RoomType.fromJson(json['type'] as String)

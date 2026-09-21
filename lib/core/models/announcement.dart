@@ -12,7 +12,7 @@ class Announcement {
     this.expiresAt,
   });
 
-  /// String ID for internal use (parsed from D1 int or legacy string).
+  /// String ID from D1 integer.
   final String id;
   final String title;
   final String body;
@@ -20,54 +20,24 @@ class Announcement {
   final String createdAt;
   final String? expiresAt;
 
-  /// Parse id from D1 (int) or legacy format (String).
-  static String _parseId(dynamic value) {
-    if (value is int) return value.toString();
-    if (value is String) return value;
-    return '';
-  }
-
-  /// Parse pinned from D1 (int 0/1) or legacy format (bool).
-  static bool _parsePinned(dynamic value) {
-    if (value is bool) return value;
-    if (value is int) return value != 0;
-    return false;
-  }
-
   factory Announcement.fromJson(Map<String, dynamic> json) {
     return Announcement(
-      id: _parseId(json['id']),
+      id: (json['id'] as int).toString(),
       title: json['title'] as String,
       body: json['body'] as String,
-      pinned: _parsePinned(json['pinned']),
-      createdAt:
-          json['created_at'] as String? ?? json['createdAt'] as String? ?? '',
-      expiresAt: json['expires_at'] as String? ?? json['expiresAt'] as String?,
+      pinned: (json['pinned'] as int? ?? 0) != 0,
+      createdAt: json['created_at'] as String? ?? '',
+      expiresAt: json['expires_at'] as String?,
     );
   }
 
-  /// Safely decode a list of [Announcement] from raw JSON.
-  ///
-  /// Accepts a raw JSON array or a `{"data": [...]}` envelope.
-  /// Returns `const []` if [raw] is null, not a list, or contains
-  /// non-map elements (silently skipped).
+  /// Safely decode a list of [Announcement] from raw JSON array.
   static List<Announcement> listFromJson(dynamic raw) {
-    final list = _unwrapList(raw);
-    return list.map((e) => Announcement.fromJson(e)).toList();
-  }
-
-  static List<Map<String, dynamic>> _unwrapList(dynamic raw) {
-    final List<dynamic>? items;
-    if (raw is List) {
-      items = raw;
-    } else if (raw is Map<String, dynamic>) {
-      final inner = raw['data'];
-      items = inner is List ? inner : null;
-    } else {
-      items = null;
-    }
-    if (items == null) return const [];
-    return items.whereType<Map<String, dynamic>>().toList();
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(Announcement.fromJson)
+        .toList();
   }
 
   Map<String, dynamic> toJson() => {

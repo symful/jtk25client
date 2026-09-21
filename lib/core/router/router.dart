@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/admin/admin.dart';
 import '../../features/announcements/announcements.dart';
 import '../../features/calendar/calendar.dart';
 import '../../features/rooms/rooms.dart';
@@ -28,9 +27,6 @@ GoRouter createRouter() {
     initialLocation: '/',
     errorBuilder: (context, state) => const NotFoundPage(),
     routes: [
-      // Standalone admin route — no navigation shell.
-      GoRoute(path: '/admin', builder: (context, state) => const AdminPage()),
-
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);

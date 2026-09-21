@@ -1,7 +1,8 @@
 /// Calendar feature UI — grouped month list (primary) + month-view calendar grid (secondary).
 ///
 /// List view shows events and pengganti grouped by month with upcoming/past
-/// separation and category filter. Grid view is the existing PageView month grid.
+/// separation, class filter, and category filter. Grid view is the existing
+/// PageView month grid with improved navigation.
 library;
 
 import 'dart:math' as math;
@@ -18,6 +19,7 @@ import '../../../core/providers/providers.dart';
 import '../../../core/ui/refresh_helpers.dart';
 import '../../../core/utils/wib_now.dart';
 import '../../schedule/providers/schedule_providers.dart';
+import '../../settings/data/settings_data.dart';
 import '../data/calendar_data.dart';
 
 // ---------------------------------------------------------------------------
@@ -40,11 +42,11 @@ Future<void> _onRefreshCalendar(BuildContext context, WidgetRef ref) async {
 }
 
 // ---------------------------------------------------------------------------
-// PageView base month (10-year buffer)
+// PageView base month (2-year buffer)
 // ---------------------------------------------------------------------------
 
-final _baseMonth = DateTime(DateTime.now().year - 10, DateTime.now().month);
-const _monthPageOffset = 120;
+final _baseMonth = DateTime(DateTime.now().year - 2, DateTime.now().month);
+const _monthPageOffset = 24;
 
 // ---------------------------------------------------------------------------
 // Calendar page
@@ -66,6 +68,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   late final PageController _monthPageController;
   final ScrollController _listScrollController = ScrollController();
   final Map<String, GlobalKey> _monthKeys = {};
+  String _selectedClassFilter = 'Semua';
   String _selectedCategory = 'Semua';
 
   @override
@@ -118,7 +121,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kalender'),
+        title: const Text('Acara'),
         actions: [
           IconButton(
             icon: const Icon(Icons.today),
@@ -156,6 +159,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             listScrollController: _listScrollController,
             monthKeys: _monthKeys,
             viewIndex: _viewIndex,
+            classFilter: _selectedClassFilter,
             selectedCategory: _selectedCategory,
             onViewChanged: (index) => setState(() => _viewIndex = index),
             onMonthChanged: (month) {
@@ -170,6 +174,16 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             onCategoryChanged: (cat) {
               setState(() => _selectedCategory = cat);
             },
+            onClassFilterChanged: (filter) {
+              setState(() {
+                _selectedClassFilter = filter;
+                _selectedDate = null;
+              });
+              if (filter != 'Semua') {
+                ref.read(viewedClassProvider.notifier).select(filter);
+              }
+            },
+            onToday: _jumpToToday,
           );
         },
       ),
@@ -178,7 +192,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 }
 
 // ---------------------------------------------------------------------------
-// Calendar body — segmented control + view content
+// Calendar body — class filter + category filter + segmented control + views
 // ---------------------------------------------------------------------------
 
 class _CalendarBody extends ConsumerWidget {
@@ -190,11 +204,14 @@ class _CalendarBody extends ConsumerWidget {
     required this.listScrollController,
     required this.monthKeys,
     required this.viewIndex,
+    required this.classFilter,
     required this.selectedCategory,
     required this.onViewChanged,
     required this.onMonthChanged,
     required this.onDateSelected,
     required this.onCategoryChanged,
+    required this.onClassFilterChanged,
+    required this.onToday,
   });
 
   final List<JtkCalendar> events;
@@ -204,43 +221,72 @@ class _CalendarBody extends ConsumerWidget {
   final ScrollController listScrollController;
   final Map<String, GlobalKey> monthKeys;
   final int viewIndex;
+  final String classFilter;
   final String selectedCategory;
   final ValueChanged<int> onViewChanged;
   final ValueChanged<DateTime> onMonthChanged;
   final ValueChanged<DateTime> onDateSelected;
   final ValueChanged<String> onCategoryChanged;
+  final ValueChanged<String> onClassFilterChanged;
+  final VoidCallback onToday;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classCode = ref.watch(viewedClassProvider);
     final penggantiAsync = ref.watch(penggantiProvider);
+
+    // All pengganti entries from provider.
+    final allPengganti = penggantiAsync.when(
+      loading: () => <PenggantiEntry>[],
+      error: (_, _) => <PenggantiEntry>[],
+      data: (entries) => entries,
+    );
+
+    // Filter pengganti by class (no pengganti when 'Semua' — they're class-specific).
+    final penggantiEntries = classFilter == 'Semua'
+        ? <PenggantiEntry>[]
+        : allPengganti.where((e) => e.classCode == classFilter).toList();
+
+    // Filter events: 'Semua' = global only (no class_name), specific class = that class + global.
+    final classFilteredEvents = classFilter == 'Semua'
+        ? events
+              .where((e) => e.className == null || e.className!.isEmpty)
+              .toList()
+        : events
+              .where(
+                (e) =>
+                    e.className == null ||
+                    e.className!.isEmpty ||
+                    e.className == classFilter,
+              )
+              .toList();
 
     // Filter events by category.
     final filteredEvents = selectedCategory == 'Semua'
-        ? events
-        : events.where((e) => e.category == selectedCategory).toList();
-
-    // Collect pengganti entries for the viewed class.
-    final penggantiEntries = penggantiAsync.when(
-      loading: () => <PenggantiEntry>[],
-      error: (_, _) => <PenggantiEntry>[],
-      data: (entries) =>
-          entries.where((e) => e.classCode == classCode).toList(),
-    );
+        ? classFilteredEvents
+        : classFilteredEvents
+              .where((e) => e.category == selectedCategory)
+              .toList();
 
     // Distinct categories from all events.
     final categories = distinctCategories(events);
 
-    // Build dateMap for the grid view (same logic as before).
+    // Build dateMap for the grid view.
     final dateMap = _buildDateMap(events, penggantiEntries);
 
     // Build month groups for the list view.
-    final monthGroups = groupByMonth(
-      events: filteredEvents,
-      penggantiEntries: penggantiEntries,
-      classCode: classCode,
-      wibNow: wibNow,
-    );
+    final wib = wibNow;
+    final monthGroups = classFilter == 'Semua'
+        ? _buildMonthGroupsAll(
+            events: filteredEvents,
+            penggantiEntries: allPengganti,
+            wibNow: wib,
+          )
+        : groupByMonth(
+            events: filteredEvents,
+            penggantiEntries: allPengganti,
+            classCode: classFilter,
+            wibNow: wib,
+          );
 
     // Ensure GlobalKeys exist for each month header.
     for (final group in monthGroups) {
@@ -249,7 +295,10 @@ class _CalendarBody extends ConsumerWidget {
 
     return Column(
       children: [
-        // Category filter chips.
+        // Class selector chips (filled style).
+        _ClassFilter(selected: classFilter, onSelected: onClassFilterChanged),
+
+        // Category filter chips (outlined style).
         if (categories.isNotEmpty)
           _CategoryFilter(
             categories: categories,
@@ -295,6 +344,7 @@ class _CalendarBody extends ConsumerWidget {
                   monthPageController: monthPageController,
                   onMonthChanged: onMonthChanged,
                   onDateSelected: onDateSelected,
+                  onToday: onToday,
                 ),
         ),
       ],
@@ -303,7 +353,59 @@ class _CalendarBody extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Category filter chips
+// Class filter chips (filled style, single selection)
+// ---------------------------------------------------------------------------
+
+class _ClassFilter extends StatelessWidget {
+  const _ClassFilter({required this.selected, required this.onSelected});
+
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: FilterChip(
+              label: const Text('Semua'),
+              selected: selected == 'Semua',
+              onSelected: (_) => onSelected('Semua'),
+              showCheckmark: false,
+              selectedColor: colorScheme.primaryContainer,
+              side: selected == 'Semua'
+                  ? null
+                  : BorderSide(color: colorScheme.outline),
+            ),
+          ),
+          for (final code in kAllClassCodes)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FilterChip(
+                label: Text(code),
+                selected: selected == code,
+                onSelected: (_) => onSelected(code),
+                showCheckmark: false,
+                selectedColor: colorScheme.primaryContainer,
+                side: selected == code
+                    ? null
+                    : BorderSide(color: colorScheme.outline),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Category filter chips (outlined style)
 // ---------------------------------------------------------------------------
 
 class _CategoryFilter extends StatelessWidget {
@@ -366,7 +468,7 @@ class _GroupedMonthList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (monthGroups.isEmpty) {
-      return const Center(child: Text('Tidak ada acara'));
+      return const _EmptyState(message: 'Tidak ada acara yang cocok');
     }
 
     return ListView(
@@ -425,7 +527,7 @@ class _GroupedMonthList extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// List event card (primary view)
+// List event card (primary view) — redesigned with accent bar + collection time
 // ---------------------------------------------------------------------------
 
 class _ListCalendarEventCard extends StatelessWidget {
@@ -437,6 +539,7 @@ class _ListCalendarEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final accent = _categoryAccentColor(event.category);
     final startDate = DateTime.tryParse(event.date);
     final dateStr = startDate != null
         ? DateFormat('dd MMMM yyyy', 'id').format(startDate)
@@ -444,81 +547,119 @@ class _ListCalendarEventCard extends StatelessWidget {
     final multiDay = isMultiDayEvent(event);
 
     return Opacity(
-      opacity: isUpcoming ? 1.0 : 0.5,
+      opacity: isUpcoming ? 1.0 : 0.55,
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        shape: isUpcoming
-            ? RoundedRectangleBorder(
-                side: BorderSide(color: colorScheme.primary, width: 1.5),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        elevation: isUpcoming ? 1.5 : 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Title + category badge.
-              Row(
-                children: [
-                  const Icon(Icons.event, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      event.title,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  ),
-                  if (event.category != null) ...[
-                    const SizedBox(width: 8),
-                    _CategoryBadge(category: event.category!),
-                  ],
-                ],
+              // Left accent bar.
+              Container(
+                width: 4,
+                color: isUpcoming ? accent : accent.withOpacity(0.4),
               ),
-              const SizedBox(height: 8),
-              // Date + multi-day badge.
-              Row(
-                children: [
-                  const Icon(Icons.calendar_today, size: 14),
-                  const SizedBox(width: 6),
-                  Text(dateStr, style: Theme.of(context).textTheme.bodySmall),
-                  if (multiDay) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
+              // Content.
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title + category badge.
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              event.title,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          if (event.category != null) ...[
+                            const SizedBox(width: 8),
+                            _CategoryBadge(category: event.category!),
+                          ],
+                        ],
                       ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(4),
+                      const SizedBox(height: 8),
+                      // Date range (prominent).
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 16, color: accent),
+                          const SizedBox(width: 6),
+                          Text(
+                            dateStr,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          if (multiDay) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                's/d ${DateFormat('dd MMM', 'id').format(DateTime.tryParse(event.endDate) ?? DateTime.now())}',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: colorScheme.onSecondaryContainer,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      child: Text(
-                        's/d ${DateFormat('dd MMM', 'id').format(DateTime.tryParse(event.endDate) ?? DateTime.now())}',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSecondaryContainer,
+                      // Collection time.
+                      if (event.collectionTime != null &&
+                          event.collectionTime!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 14,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Jam pengumpulan: ${event.collectionTime}',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              // Location chip.
-              if (event.location != null) ...[
-                const SizedBox(height: 6),
-                _LocationChip(location: event.location!),
-              ],
-              // Description (rendered as Markdown).
-              if (event.description != null) ...[
-                const SizedBox(height: 8),
-                MarkdownBody(
-                  data: event.description!,
-                  shrinkWrap: true,
-                  styleSheet: MarkdownStyleSheet(
-                    p: Theme.of(context).textTheme.bodyMedium,
+                      ],
+                      // Location chip.
+                      if (event.location != null) ...[
+                        const SizedBox(height: 6),
+                        _LocationChip(location: event.location!),
+                      ],
+                      // Description (rendered as Markdown).
+                      if (event.description != null) ...[
+                        const SizedBox(height: 8),
+                        MarkdownBody(
+                          data: event.description!,
+                          shrinkWrap: true,
+                          styleSheet: MarkdownStyleSheet(
+                            p: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -539,6 +680,7 @@ class _GridView extends StatelessWidget {
     required this.monthPageController,
     required this.onMonthChanged,
     required this.onDateSelected,
+    required this.onToday,
   });
 
   final DateTime currentMonth;
@@ -547,6 +689,7 @@ class _GridView extends StatelessWidget {
   final PageController monthPageController;
   final ValueChanged<DateTime> onMonthChanged;
   final ValueChanged<DateTime> onDateSelected;
+  final VoidCallback onToday;
 
   @override
   Widget build(BuildContext context) {
@@ -570,10 +713,11 @@ class _GridView extends StatelessWidget {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           ),
+          onToday: onToday,
         ),
         const _WeekdayHeaders(),
         Expanded(
-          flex: 3,
+          flex: 4,
           child: PageView.builder(
             controller: monthPageController,
             clipBehavior: Clip.none,
@@ -604,7 +748,7 @@ class _GridView extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Month header with navigation
+// Month header with navigation + "Hari ini" button
 // ---------------------------------------------------------------------------
 
 class _MonthHeader extends StatelessWidget {
@@ -612,27 +756,43 @@ class _MonthHeader extends StatelessWidget {
     required this.currentMonth,
     required this.onPrev,
     required this.onNext,
+    required this.onToday,
   });
 
   final DateTime currentMonth;
   final VoidCallback onPrev;
   final VoidCallback onNext;
+  final VoidCallback onToday;
 
   @override
   Widget build(BuildContext context) {
     final monthStr = DateFormat('MMMM yyyy', 'id').format(currentMonth);
+    final today = DateTime.now();
+    final isCurrentMonth =
+        currentMonth.year == today.year && currentMonth.month == today.month;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(icon: const Icon(Icons.chevron_left), onPressed: onPrev),
-          Text(
-            monthStr,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          Expanded(
+            child: Text(
+              monthStr,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
           ),
+          if (!isCurrentMonth)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: TextButton(
+                onPressed: onToday,
+                child: const Text('Hari ini'),
+              ),
+            ),
           IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext),
         ],
       ),
@@ -736,21 +896,19 @@ class _CalendarGrid extends StatelessWidget {
               final hasPengganti =
                   hasItems && items.any((i) => i is CalendarPenggantiItem);
 
+              final colorScheme = Theme.of(context).colorScheme;
+
               return Expanded(
                 child: GestureDetector(
                   onTap: () => onDateSelected(date),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     margin: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : null,
+                      color: isSelected ? colorScheme.primaryContainer : null,
                       borderRadius: BorderRadius.circular(8),
                       border: isToday
-                          ? Border.all(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 2,
-                            )
+                          ? Border.all(color: colorScheme.primary, width: 2)
                           : null,
                     ),
                     child: Column(
@@ -763,9 +921,7 @@ class _CalendarGrid extends StatelessWidget {
                                 ? FontWeight.w700
                                 : null,
                             color: isSelected
-                                ? Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimaryContainer
+                                ? colorScheme.onPrimaryContainer
                                 : null,
                           ),
                         ),
@@ -795,9 +951,7 @@ class _CalendarGrid extends StatelessWidget {
                                     horizontal: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+                                    color: colorScheme.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -806,9 +960,7 @@ class _CalendarGrid extends StatelessWidget {
                                   '+${eventCount - 3}',
                                   style: TextStyle(
                                     fontSize: 8,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                             ],
@@ -887,57 +1039,96 @@ class _GridEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final accent = _categoryAccentColor(event.category);
     final dateStr = _formatDateRange(event.date, event.endDate);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Title + category badge.
-            Row(
-              children: [
-                const Icon(Icons.event, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    event.title,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
-                if (event.category != null) ...[
-                  const SizedBox(width: 8),
-                  _CategoryBadge(category: event.category!),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Date range.
-            Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 14),
-                const SizedBox(width: 6),
-                Text(dateStr, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-            // Location chip.
-            if (event.location != null) ...[
-              const SizedBox(height: 6),
-              _LocationChip(location: event.location!),
-            ],
-            // Description (rendered as Markdown).
-            if (event.description != null) ...[
-              const SizedBox(height: 8),
-              MarkdownBody(
-                data: event.description!,
-                shrinkWrap: true,
-                styleSheet: MarkdownStyleSheet(
-                  p: Theme.of(context).textTheme.bodyMedium,
+            // Left accent bar.
+            Container(width: 4, color: accent),
+            // Content.
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title + category badge.
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            event.title,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        if (event.category != null) ...[
+                          const SizedBox(width: 8),
+                          _CategoryBadge(category: event.category!),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Date range (prominent).
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 16, color: accent),
+                        const SizedBox(width: 6),
+                        Text(
+                          dateStr,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    // Collection time.
+                    if (event.collectionTime != null &&
+                        event.collectionTime!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 14,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Jam pengumpulan: ${event.collectionTime}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ],
+                    // Location chip.
+                    if (event.location != null) ...[
+                      const SizedBox(height: 6),
+                      _LocationChip(location: event.location!),
+                    ],
+                    // Description (rendered as Markdown).
+                    if (event.description != null) ...[
+                      const SizedBox(height: 8),
+                      MarkdownBody(
+                        data: event.description!,
+                        shrinkWrap: true,
+                        styleSheet: MarkdownStyleSheet(
+                          p: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -1127,8 +1318,150 @@ class _LocationChip extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.event_busy,
+              size: 64,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.4),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Get the primary date of a calendar list item.
+DateTime? _itemDate(CalendarListItem item) {
+  return switch (item) {
+    CalendarEventItem(:final event) => DateTime.tryParse(event.date),
+    CalendarPenggantiItem(:final entry) => DateTime.tryParse(entry.date),
+  };
+}
+
+/// Deterministic accent color for an event category.
+Color _categoryAccentColor(String? category) {
+  if (category == null) return const Color(0xFF78909C); // blue grey 400
+  const palette = [
+    Color(0xFF1565C0), // blue 800
+    Color(0xFF2E7D32), // green 800
+    Color(0xFF7B1FA2), // purple 700
+    Color(0xFF00838F), // cyan 800
+    Color(0xFFE65100), // orange 900
+    Color(0xFFC62828), // red 800
+    Color(0xFF283593), // indigo 800
+    Color(0xFF558B2F), // light green 800
+  ];
+  return palette[category.hashCode.abs() % palette.length];
+}
+
+/// Build month groups without class filtering (for 'Semua' mode).
+///
+/// Mirrors [groupByMonth] logic but includes all pengganti entries
+/// regardless of class code.
+List<CalendarMonthGroup> _buildMonthGroupsAll({
+  required List<JtkCalendar> events,
+  required List<PenggantiEntry> penggantiEntries,
+  required DateTime wibNow,
+}) {
+  final items = <CalendarListItem>[
+    ...events.map(CalendarEventItem.new),
+    ...penggantiEntries.map(CalendarPenggantiItem.new),
+  ];
+
+  // Group by year-month.
+  final monthMap = <DateTime, List<CalendarListItem>>{};
+  for (final item in items) {
+    final date = _itemDate(item);
+    if (date == null) continue;
+    final ym = DateTime(date.year, date.month);
+    monthMap.putIfAbsent(ym, () => []).add(item);
+  }
+
+  // Split each month into upcoming/past.
+  final result = <CalendarMonthGroup>[];
+  for (final entry in monthMap.entries) {
+    final upcoming = <CalendarListItem>[];
+    final past = <CalendarListItem>[];
+
+    for (final item in entry.value) {
+      final date = _itemDate(item);
+      if (date != null) {
+        final itemDay = DateTime(date.year, date.month, date.day);
+        final nowDay = DateTime(wibNow.year, wibNow.month, wibNow.day);
+        if (!itemDay.isBefore(nowDay)) {
+          upcoming.add(item);
+        } else {
+          past.add(item);
+        }
+      } else {
+        past.add(item);
+      }
+    }
+
+    // Sort upcoming ascending by date.
+    upcoming.sort(
+      (a, b) =>
+          (_itemDate(a) ?? DateTime(0)).compareTo(_itemDate(b) ?? DateTime(0)),
+    );
+    // Sort past descending by date.
+    past.sort(
+      (a, b) =>
+          (_itemDate(b) ?? DateTime(0)).compareTo(_itemDate(a) ?? DateTime(0)),
+    );
+
+    result.add(
+      CalendarMonthGroup(
+        yearMonth: entry.key,
+        label: DateFormat('MMMM yyyy', 'id').format(entry.key),
+        upcoming: upcoming,
+        past: past,
+      ),
+    );
+  }
+
+  // Sort groups: months with upcoming items first (ascending),
+  // then months with only past items (descending).
+  result.sort((a, b) {
+    final aHasUpcoming = a.upcoming.isNotEmpty;
+    final bHasUpcoming = b.upcoming.isNotEmpty;
+    if (aHasUpcoming && !bHasUpcoming) return -1;
+    if (!aHasUpcoming && bHasUpcoming) return 1;
+    if (aHasUpcoming) return a.yearMonth.compareTo(b.yearMonth);
+    return b.yearMonth.compareTo(a.yearMonth);
+  });
+
+  return result;
+}
 
 /// Build the date→items map for the grid view's dateMap.
 Map<DateTime, List<CalendarListItem>> _buildDateMap(

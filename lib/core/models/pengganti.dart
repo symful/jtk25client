@@ -34,7 +34,7 @@ class PenggantiEntry {
     this.sessions = const [],
   });
 
-  /// String ID for internal use (parsed from D1 int or legacy string).
+  /// String ID from D1 integer.
   final String id;
   final String classCode;
 
@@ -44,16 +44,9 @@ class PenggantiEntry {
   final String? note;
   final List<Session> sessions;
 
-  /// Parse id from D1 (int) or legacy format (String).
-  static String _parseId(dynamic value) {
-    if (value is int) return value.toString();
-    if (value is String) return value;
-    return '';
-  }
-
   factory PenggantiEntry.fromJson(Map<String, dynamic> json) {
     return PenggantiEntry(
-      id: _parseId(json['id']),
+      id: (json['id'] as int).toString(),
       classCode: json['class_code'] as String,
       date: json['date'] as String,
       kind: PenggantiKind.fromJson(json['kind'] as String),
@@ -62,28 +55,13 @@ class PenggantiEntry {
     );
   }
 
-  /// Safely decode a list of [PenggantiEntry] from raw JSON.
-  ///
-  /// Accepts a raw JSON array or a `{"data": [...]}` envelope.
-  /// Returns `const []` if [raw] is null, not a list, or contains
-  /// non-map elements (silently skipped).
+  /// Safely decode a list of [PenggantiEntry] from raw JSON array.
   static List<PenggantiEntry> listFromJson(dynamic raw) {
-    final list = _unwrapList(raw);
-    return list.map((e) => PenggantiEntry.fromJson(e)).toList();
-  }
-
-  static List<Map<String, dynamic>> _unwrapList(dynamic raw) {
-    final List<dynamic>? items;
-    if (raw is List) {
-      items = raw;
-    } else if (raw is Map<String, dynamic>) {
-      final inner = raw['data'];
-      items = inner is List ? inner : null;
-    } else {
-      items = null;
-    }
-    if (items == null) return const [];
-    return items.whereType<Map<String, dynamic>>().toList();
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(PenggantiEntry.fromJson)
+        .toList();
   }
 
   Map<String, dynamic> toJson() => {
