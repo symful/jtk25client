@@ -69,7 +69,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   final ScrollController _listScrollController = ScrollController();
   final Map<String, GlobalKey> _monthKeys = {};
   String _selectedClassFilter = 'Semua';
-  String _selectedCategory = 'Semua';
 
   @override
   void initState() {
@@ -160,7 +159,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             monthKeys: _monthKeys,
             viewIndex: _viewIndex,
             classFilter: _selectedClassFilter,
-            selectedCategory: _selectedCategory,
             onViewChanged: (index) => setState(() => _viewIndex = index),
             onMonthChanged: (month) {
               setState(() {
@@ -170,9 +168,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             },
             onDateSelected: (date) {
               setState(() => _selectedDate = date);
-            },
-            onCategoryChanged: (cat) {
-              setState(() => _selectedCategory = cat);
             },
             onClassFilterChanged: (filter) {
               setState(() {
@@ -205,11 +200,9 @@ class _CalendarBody extends ConsumerWidget {
     required this.monthKeys,
     required this.viewIndex,
     required this.classFilter,
-    required this.selectedCategory,
     required this.onViewChanged,
     required this.onMonthChanged,
     required this.onDateSelected,
-    required this.onCategoryChanged,
     required this.onClassFilterChanged,
     required this.onToday,
   });
@@ -222,11 +215,9 @@ class _CalendarBody extends ConsumerWidget {
   final Map<String, GlobalKey> monthKeys;
   final int viewIndex;
   final String classFilter;
-  final String selectedCategory;
   final ValueChanged<int> onViewChanged;
   final ValueChanged<DateTime> onMonthChanged;
   final ValueChanged<DateTime> onDateSelected;
-  final ValueChanged<String> onCategoryChanged;
   final ValueChanged<String> onClassFilterChanged;
   final VoidCallback onToday;
 
@@ -247,7 +238,7 @@ class _CalendarBody extends ConsumerWidget {
         : allPengganti.where((e) => e.classCode == classFilter).toList();
 
     // Filter events: 'Semua' = global only (no class_name), specific class = that class + global.
-    final classFilteredEvents = classFilter == 'Semua'
+    final filteredEvents = classFilter == 'Semua'
         ? events
               .where((e) => e.className == null || e.className!.isEmpty)
               .toList()
@@ -260,18 +251,8 @@ class _CalendarBody extends ConsumerWidget {
               )
               .toList();
 
-    // Filter events by category.
-    final filteredEvents = selectedCategory == 'Semua'
-        ? classFilteredEvents
-        : classFilteredEvents
-              .where((e) => e.category == selectedCategory)
-              .toList();
-
-    // Distinct categories from all events.
-    final categories = distinctCategories(events);
-
-    // Build dateMap for the grid view.
-    final dateMap = _buildDateMap(events, penggantiEntries);
+    // Build dateMap for the grid view (use filtered events).
+    final dateMap = _buildDateMap(filteredEvents, penggantiEntries);
 
     // Build month groups for the list view.
     final wib = wibNow;
@@ -297,14 +278,6 @@ class _CalendarBody extends ConsumerWidget {
       children: [
         // Class selector chips (filled style).
         _ClassFilter(selected: classFilter, onSelected: onClassFilterChanged),
-
-        // Category filter chips (outlined style).
-        if (categories.isNotEmpty)
-          _CategoryFilter(
-            categories: categories,
-            selected: selectedCategory,
-            onSelected: onCategoryChanged,
-          ),
 
         // Segmented control: Daftar | Kalender.
         Padding(
@@ -396,52 +369,6 @@ class _ClassFilter extends StatelessWidget {
                 side: selected == code
                     ? null
                     : BorderSide(color: colorScheme.outline),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Category filter chips (outlined style)
-// ---------------------------------------------------------------------------
-
-class _CategoryFilter extends StatelessWidget {
-  const _CategoryFilter({
-    required this.categories,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final List<String> categories;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: FilterChip(
-              label: const Text('Semua'),
-              selected: selected == 'Semua',
-              onSelected: (_) => onSelected('Semua'),
-            ),
-          ),
-          for (final cat in categories)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: FilterChip(
-                label: Text(cat),
-                selected: selected == cat,
-                onSelected: (_) => onSelected(cat),
               ),
             ),
         ],
@@ -717,7 +644,7 @@ class _GridView extends StatelessWidget {
         ),
         const _WeekdayHeaders(),
         Expanded(
-          flex: 4,
+          flex: 3,
           child: PageView.builder(
             controller: monthPageController,
             clipBehavior: Clip.none,
@@ -739,7 +666,7 @@ class _GridView extends StatelessWidget {
         ),
         const Divider(height: 1),
         Expanded(
-          flex: 2,
+          flex: 3,
           child: _EventListForDate(date: selectedDate, items: selectedItems),
         ),
       ],
