@@ -24,7 +24,12 @@ import '../../features/schedule/providers/schedule_providers.dart';
 /// Hive key for the notification enabled preference.
 const String _kNotificationsEnabledKey = 'notifications_enabled';
 
+/// Callback type for rescheduling reminders after toggle.
+typedef RescheduleCallback = Future<void> Function();
+
 class _NotificationEnabledNotifier extends Notifier<bool> {
+  RescheduleCallback? _onReschedule;
+
   @override
   bool build() {
     final box = Hive.box(kSettingsBoxName);
@@ -42,36 +47,54 @@ class _NotificationEnabledNotifier extends Notifier<bool> {
     return enabled;
   }
 
+  /// Register the reschedule callback (set once from main.dart at startup).
+  void setRescheduleCallback(RescheduleCallback callback) {
+    _onReschedule = callback;
+  }
+
   /// Toggle notifications on/off and persist the choice.
   ///
   /// When enabling: requests permission and subscribes to class topic.
   /// When disabling: unsubscribes from all topics.
-  void toggle(bool value) {
+  ///
+  /// Returns whether the toggle was successfully set to [value].
+  Future<bool> toggle(bool value) async {
     state = value;
     Hive.box(kSettingsBoxName).put(_kNotificationsEnabledKey, value);
     debugLog('[FCM] notifications enabled: $value');
 
     final service = NotificationService.instance;
     if (value) {
-      service.requestPermission().then((granted) {
-        if (granted) {
-          // Subscribe to the currently selected class topic.
-          final classCode = ref.read(selectedClassProvider);
-          if (classCode.isNotEmpty) {
-            debugLog('[FCM] subscribing on enable: $classCode');
-            FcmService.instance.subscribeToClassTopic(classCode);
-          }
-        } else {
-          debugLog('[FCM] permission denied — disabling toggle');
-          // Permission denied — turn off the toggle.
-          state = false;
-          Hive.box(kSettingsBoxName).put(_kNotificationsEnabledKey, false);
-        }
-      });
+      final granted = await service.requestPermission();
+      if (!granted) {
+        debugLog('[FCM] permission denied — disabling toggle');
+        state = false;
+        Hive.box(kSettingsBoxName).put(_kNotificationsEnabledKey, false);
+        ref.invalidate(fcmStatusProvider);
+        return false;
+      }
+
+      // Subscribe to the currently selected class topic.
+      final classCode = ref.read(selectedClassProvider);
+      if (classCode.isNotEmpty) {
+        debugLog('[FCM] subscribing on enable: $classCode');
+        await FcmService.instance.subscribeToClassTopic(classCode);
+      }
+
+      // Reschedule reminders after permission granted and topic subscribed.
+      if (_onReschedule != null) {
+        debugLog('[FCM] rescheduling reminders after enable');
+        await _onReschedule!();
+      }
+
+      ref.invalidate(fcmStatusProvider);
+      return true;
     } else {
       // Unsubscribe from all topics when disabling.
       debugLog('[FCM] disabling — unsubscribing all topics');
-      FcmService.instance.unsubscribeFromAllTopics();
+      await FcmService.instance.unsubscribeFromAllTopics();
+      ref.invalidate(fcmStatusProvider);
+      return true;
     }
   }
 }

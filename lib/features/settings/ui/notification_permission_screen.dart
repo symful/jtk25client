@@ -98,20 +98,19 @@ class _NotificationPermissionScreenState
     setState(() => _requesting = true);
 
     try {
-      final service = NotificationService.instance;
-      final granted = await service.requestPermission();
+      final notifier = ref.read(notificationEnabledProvider.notifier);
+      final success = await notifier.toggle(true);
 
       if (!mounted) return;
 
-      if (granted) {
-        // Enable the notification toggle.
-        ref.read(notificationEnabledProvider.notifier).toggle(true);
+      if (success) {
         setState(() => _state = _PermissionState.granted);
         await _subscribeToClassTopic();
         ref.invalidate(notificationStatusProvider);
       } else {
-        // Check if permanently denied.
+        // Permission denied — check if permanently denied.
         try {
+          final service = NotificationService.instance;
           final isEnabled = await service.isEnabled();
           if (!mounted) return;
 

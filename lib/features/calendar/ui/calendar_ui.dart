@@ -363,7 +363,7 @@ class _CalendarGrid extends StatelessWidget {
               final items = dateMap[key];
               final hasItems = items != null && items.isNotEmpty;
               final eventCount = hasItems
-                  ? items.where((i) => i is _CalendarEventItem).length
+                  ? items.whereType<_CalendarEventItem>().length
                   : 0;
               final hasPengganti =
                   hasItems && items.any((i) => i is _CalendarPenggantiItem);

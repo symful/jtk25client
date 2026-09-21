@@ -120,10 +120,8 @@ class NotificationService {
   Future<void> scheduleClassReminders({
     required List<DaySchedule> schedule,
     required String classCode,
-    int daysAhead = 2,
+    int daysAhead = 7,
   }) async {
-    await cancelAllReminders();
-
     final now = DateTime.now();
     final box = Hive.box(kSettingsBoxName);
     final scheduledKeys = <String>{};
@@ -173,7 +171,7 @@ class NotificationService {
             id: alarmId++,
             title: 'Kelas segera dimulai',
             body:
-                '${firstSession.courseName} (${firstSession.type.label}) — ${slot.start}',
+                '${firstSession.courseName} (${firstSession.type.label}) — ${slot.start} di ${firstSession.room}',
             scheduledTime: scheduledTime,
           );
         }
@@ -326,7 +324,7 @@ class NotificationService {
             id: alarmId++,
             title: 'Kelas pengganti segera',
             body:
-                '${session.courseName} (${session.type.label}) — ${slot.start}',
+                '${session.courseName} (${session.type.label}) — ${slot.start} di ${session.room}',
             scheduledTime: scheduledTime,
           );
         }
