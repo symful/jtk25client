@@ -21,9 +21,6 @@ import '../../features/schedule/providers/schedule_providers.dart';
 // Notification enabled toggle (Hive-persisted)
 // ---------------------------------------------------------------------------
 
-/// Hive key for the notification enabled preference.
-const String _kNotificationsEnabledKey = 'notifications_enabled';
-
 /// Callback type for rescheduling reminders after toggle.
 typedef RescheduleCallback = Future<void> Function();
 
@@ -33,7 +30,8 @@ class _NotificationEnabledNotifier extends Notifier<bool> {
   @override
   bool build() {
     final box = Hive.box(kSettingsBoxName);
-    final enabled = box.get(_kNotificationsEnabledKey) as bool? ?? false;
+    final enabled =
+        box.get(SettingsKeys.notificationsEnabled) as bool? ?? false;
 
     // Auto re-subscribe FCM topic when the selected class changes.
     // ref.listen fires the callback on every change — silent, no UI jargon.
@@ -60,7 +58,7 @@ class _NotificationEnabledNotifier extends Notifier<bool> {
   /// Returns whether the toggle was successfully set to [value].
   Future<bool> toggle(bool value) async {
     state = value;
-    Hive.box(kSettingsBoxName).put(_kNotificationsEnabledKey, value);
+    Hive.box(kSettingsBoxName).put(SettingsKeys.notificationsEnabled, value);
     debugLog('[FCM] notifications enabled: $value');
 
     final service = NotificationService.instance;
@@ -69,7 +67,9 @@ class _NotificationEnabledNotifier extends Notifier<bool> {
       if (!granted) {
         debugLog('[FCM] permission denied — disabling toggle');
         state = false;
-        Hive.box(kSettingsBoxName).put(_kNotificationsEnabledKey, false);
+        Hive.box(
+          kSettingsBoxName,
+        ).put(SettingsKeys.notificationsEnabled, false);
         ref.invalidate(fcmStatusProvider);
         return false;
       }

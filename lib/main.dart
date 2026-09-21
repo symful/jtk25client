@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +8,14 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:workmanager/workmanager.dart';
 
 import 'app.dart';
 import 'core/cache/offline_cache.dart';
+import 'core/models/calendar.dart';
+import 'core/models/pengganti.dart';
+import 'core/models/schedule.dart';
+import 'core/notifications/background_refresh.dart';
 import 'core/notifications/fcm_service.dart';
 import 'core/notifications/notification_providers.dart';
 import 'core/notifications/notification_service.dart';
@@ -65,6 +72,17 @@ void main() async {
     localNotifications: NotificationService.instance.plugin,
   );
 
+  // Initialize workmanager for Android background reminder refresh.
+  // Server cron is authoritative; this is best-effort local refresh.
+  if (Platform.isAndroid) {
+    await Workmanager().initialize(callbackDispatcher);
+    await Workmanager().registerPeriodicTask(
+      kBackgroundRefreshUniqueName,
+      kBackgroundRefreshTaskName,
+      frequency: kBackgroundRefreshInterval,
+    );
+  }
+
   // Startup reschedule: schedule reminders immediately if notifications
   // are enabled, so the user gets reminders without needing an FCM message.
   if (_container.read(notificationEnabledProvider)) {
@@ -79,55 +97,56 @@ void main() async {
 /// Reschedule all local reminders from current provider data.
 ///
 /// Called at startup (fire-and-forget) and on FCM data-message arrival.
-/// Also exposed as the workmanager reschedule entry point for T4.
+/// Reads provider data, then delegates to the shared
+/// [rescheduleRemindersFromData] helper — also used by the workmanager
+/// background callback (which reads from Hive cache instead of providers).
 Future<void> _rescheduleReminders() async {
-  final notif = NotificationService.instance;
+  List<DaySchedule>? classSchedule;
+  var selectedClass = '';
+  var calendarEvents = <JtkCalendar>[];
+  var penggantiEntries = <PenggantiEntry>[];
 
-  // Single cancel point — wipes stale alarms before the fresh pass.
-  await notif.cancelAllReminders();
-
-  // Class reminders
+  // Read class schedule
   try {
     final schedules = await _container
         .read(schedulesProvider.future)
         .timeout(const Duration(seconds: 10));
-    final selectedClass = _container.read(selectedClassProvider);
+    selectedClass = _container.read(selectedClassProvider);
     if (selectedClass.isNotEmpty) {
       final cls = schedules.classes.firstWhere(
         (c) => c.className == selectedClass,
         orElse: () => schedules.classes.first,
       );
-      await notif.scheduleClassReminders(
-        schedule: cls.schedule,
-        classCode: selectedClass,
-      );
-      liveTracker.start(schedules.classes);
+      classSchedule = cls.schedule;
     }
+    liveTracker.start(schedules.classes);
   } catch (e) {
     debugLog('[Notif] class reschedule failed: $e');
   }
 
-  // Calendar reminders
+  // Read calendar
   try {
-    final calendar = await _container
+    calendarEvents = await _container
         .read(calendarProvider.future)
         .timeout(const Duration(seconds: 10));
-    if (calendar.isNotEmpty) {
-      await notif.scheduleCalendarReminders(events: calendar);
-    }
   } catch (e) {
     debugLog('[Notif] calendar reschedule failed: $e');
   }
 
-  // Pengganti reminders
+  // Read pengganti
   try {
-    final pengganti = await _container
+    penggantiEntries = await _container
         .read(penggantiProvider.future)
         .timeout(const Duration(seconds: 10));
-    if (pengganti.isNotEmpty) {
-      await notif.schedulePenggantiReminders(entries: pengganti);
-    }
   } catch (e) {
     debugLog('[Notif] pengganti reschedule failed: $e');
   }
+
+  // Delegate to shared helper for cancel + schedule.
+  await rescheduleRemindersFromData(
+    classSchedule: classSchedule,
+    selectedClass: selectedClass,
+    calendarEvents: calendarEvents,
+    penggantiEntries: penggantiEntries,
+  );
 }

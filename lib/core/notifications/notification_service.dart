@@ -33,9 +33,6 @@ const String kNotificationChannelName = 'Pembaruan Jadwal';
 const String kNotificationChannelDesc =
     'Notifikasi pembaruan data jadwal dan pengingat kelas';
 
-/// Hive key for scheduled alarm dedup keys.
-const String _kScheduledAlarmsKey = 'notification_scheduled_alarms';
-
 // ---------------------------------------------------------------------------
 // NotificationService singleton
 // ---------------------------------------------------------------------------
@@ -123,7 +120,6 @@ class NotificationService {
     int daysAhead = 7,
   }) async {
     final now = DateTime.now();
-    final box = Hive.box(kSettingsBoxName);
     final scheduledKeys = <String>{};
     var alarmId = 1;
 
@@ -177,9 +173,6 @@ class NotificationService {
         }
       }
     }
-
-    // Persist scheduled keys for dedup across restarts.
-    await box.put(_kScheduledAlarmsKey, scheduledKeys.toList());
   }
 
   /// Group consecutive sessions with the same [courseCode] into blocks.
