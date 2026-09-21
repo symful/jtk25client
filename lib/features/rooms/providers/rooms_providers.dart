@@ -134,7 +134,7 @@ final penggantiCellsProvider = Provider<Set<(String, Day, int)>>((ref) {
 // ---------------------------------------------------------------------------
 
 /// Matrix filter mode: show all, or filter to a specific day/slot.
-enum MatrixFilterMode { all, availableNow, daySlot }
+enum MatrixFilterMode { all, availableNow }
 
 class _MatrixFilterNotifier extends Notifier<MatrixFilterMode> {
   @override

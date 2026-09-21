@@ -308,6 +308,7 @@ class _RoomListTile extends ConsumerWidget {
     );
     final subtitle = occupancies.isNotEmpty
         ? '${occupancies.first.courseCode} · ${occupancies.first.sessionTime}'
+              '${occupancies.length > 1 ? ' +${occupancies.length - 1} lagi' : ''}'
         : (room.type == RoomType.lab ? 'Laboratorium' : 'Ruang Kelas');
 
     return ListTile(
@@ -797,12 +798,9 @@ class _RoomMatrix extends StatelessWidget {
   }
 }
 
-/// Compact slot label: "07.00-07.50" → "7:00".
+/// Full range slot label: "07.00-07.50" → "07.00–07.50".
 String _compactSlotLabel(String slot) {
-  final start = slot.split('-').first;
-  final parts = start.split('.');
-  final hour = int.tryParse(parts.first) ?? 0;
-  return '$hour:${parts.last}';
+  return slot.replaceFirst('-', '–');
 }
 
 // ---------------------------------------------------------------------------
@@ -854,7 +852,7 @@ class _MatrixCell extends StatelessWidget {
               ? Text(
                   occupancies.first.courseCode,
                   style: TextStyle(
-                    fontSize: 8,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: isPengganti ? Colors.amber.shade700 : Colors.red,
                   ),
