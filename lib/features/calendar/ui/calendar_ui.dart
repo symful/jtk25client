@@ -628,7 +628,8 @@ class _GridView extends StatelessWidget {
           )]
         : null;
 
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 16),
       children: [
         _MonthHeader(
           currentMonth: currentMonth,
@@ -643,8 +644,8 @@ class _GridView extends StatelessWidget {
           onToday: onToday,
         ),
         const _WeekdayHeaders(),
-        Expanded(
-          flex: 3,
+        SizedBox(
+          height: 400,
           child: PageView.builder(
             controller: monthPageController,
             clipBehavior: Clip.none,
@@ -665,10 +666,38 @@ class _GridView extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
-        Expanded(
-          flex: 3,
-          child: _EventListForDate(date: selectedDate, items: selectedItems),
-        ),
+        if (selectedDate == null)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Text(
+                'Pilih tanggal untuk melihat acara',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          )
+        else if (selectedItems == null || selectedItems.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Text(
+                'Tidak ada acara pada ${DateFormat('dd MMMM yyyy', 'id').format(selectedDate!)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          )
+        else
+          for (final item in selectedItems)
+            switch (item) {
+              CalendarEventItem(:final event) => _GridEventCard(event: event),
+              CalendarPenggantiItem(:final entry) => _PenggantiCard(
+                entry: entry,
+              ),
+            },
       ],
     );
   }
@@ -902,55 +931,6 @@ class _CalendarGrid extends StatelessWidget {
           ),
         );
       }),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Event list for selected date (grid tab)
-// ---------------------------------------------------------------------------
-
-class _EventListForDate extends StatelessWidget {
-  const _EventListForDate({required this.date, required this.items});
-
-  final DateTime? date;
-  final List<CalendarListItem>? items;
-
-  @override
-  Widget build(BuildContext context) {
-    if (date == null) {
-      return Center(
-        child: Text(
-          'Pilih tanggal untuk melihat acara',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      );
-    }
-
-    if (items == null || items!.isEmpty) {
-      final dateStr = DateFormat('dd MMMM yyyy', 'id').format(date!);
-      return Center(
-        child: Text(
-          'Tidak ada acara pada $dateStr',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: items!.length,
-      itemBuilder: (context, index) {
-        final item = items![index];
-        return switch (item) {
-          CalendarEventItem(:final event) => _GridEventCard(event: event),
-          CalendarPenggantiItem(:final entry) => _PenggantiCard(entry: entry),
-        };
-      },
     );
   }
 }
