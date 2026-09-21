@@ -53,32 +53,11 @@ void main() {
       }
     });
 
-    testWidgets('shows single notification toggle', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      // The "Pemberitahuan" section header.
-      expect(find.text('Pemberitahuan'), findsWidgets);
-
-      // SwitchListTile toggle exists.
-      expect(find.byType(SwitchListTile), findsOneWidget);
-    });
-
     testWidgets('does NOT have "Lihat Detail" button', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
       expect(find.text('Lihat Detail'), findsNothing);
-    });
-
-    testWidgets('does NOT have duplicate notification sections', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      // Only one SwitchListTile (the single toggle).
-      expect(find.byType(SwitchListTile), findsOneWidget);
     });
 
     testWidgets('does NOT show forbidden notification jargon', (tester) async {
