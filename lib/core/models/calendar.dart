@@ -13,6 +13,7 @@ class JtkCalendar {
     this.category,
     this.collectionTime,
     this.className,
+    this.isArchived = false,
   });
 
   /// String ID from D1 integer.
@@ -25,6 +26,7 @@ class JtkCalendar {
   final String? category;
   final String? collectionTime;
   final String? className;
+  final bool isArchived;
 
   factory JtkCalendar.fromJson(Map<String, dynamic> json) {
     return JtkCalendar(
@@ -37,6 +39,7 @@ class JtkCalendar {
       category: json['category'] as String?,
       collectionTime: json['collection_time'] as String?,
       className: json['class_name'] as String?,
+      isArchived: (json['is_archived'] as int? ?? 0) == 1,
     );
   }
 
@@ -59,5 +62,6 @@ class JtkCalendar {
     if (category != null) 'category': category,
     if (collectionTime != null) 'collection_time': collectionTime,
     if (className != null) 'class_name': className,
+    'is_archived': isArchived ? 1 : 0,
   };
 }
