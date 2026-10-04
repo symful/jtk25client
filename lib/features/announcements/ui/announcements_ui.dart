@@ -105,7 +105,11 @@ class _AnnouncementTile extends ConsumerWidget {
         leading: !isSeen
             ? const Badge(label: Text('Baru'))
             : (announcement.pinned
-                  ? const Icon(Icons.push_pin, color: Colors.orange, size: 20)
+                  ? Icon(
+                      Icons.push_pin,
+                      color: Theme.of(context).colorScheme.tertiary,
+                      size: 20,
+                    )
                   : null),
         title: Text(
           announcement.title,

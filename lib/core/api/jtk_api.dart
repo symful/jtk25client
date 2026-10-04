@@ -7,7 +7,6 @@ library;
 import 'package:dio/dio.dart';
 
 import '../models/announcement.dart';
-import '../models/dosen.dart';
 import '../models/calendar.dart';
 import '../models/meta.dart';
 import '../models/pengganti.dart';
@@ -79,13 +78,6 @@ class JtkApi {
     debugLog('[JtkApi] GET /api/v1/calendar');
     final resp = await _dio.get<dynamic>('/api/v1/calendar');
     return JtkCalendar.listFromJson(resp.data);
-  }
-
-  /// Fetch lecturers.
-  Future<List<Dosen>> dosen() async {
-    debugLog('[JtkApi] GET /api/v1/dosen');
-    final resp = await _dio.get<dynamic>('/api/v1/dosen');
-    return Dosen.listFromJson(resp.data);
   }
 
   /// Fetch rooms.

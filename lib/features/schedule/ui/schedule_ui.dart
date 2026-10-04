@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/pengganti.dart';
 import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/theme/theme.dart';
 import '../../../core/ui/mode_badge.dart';
 import '../../../core/ui/refresh_helpers.dart';
 import '../../../core/utils/time_slot.dart';
@@ -329,12 +330,15 @@ class _DayScheduleList extends StatelessWidget {
 
     if (dayData.isEmpty) {
       children.add(
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32),
           child: Center(
             child: Text(
               'Tidak ada jadwal',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
@@ -435,6 +439,13 @@ class _SessionCard extends StatelessWidget {
   final MergedSession session;
   final bool isActive;
 
+  /// Badge colours for the TE/PR chip, resolved for the current theme.
+  StatusColors _typeColors(BuildContext context) => statusColors(
+    context,
+    session.type == CourseType.te ? Colors.blue : Colors.green,
+    StatusTone.subtle,
+  );
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -484,9 +495,7 @@ class _SessionCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: session.type == CourseType.te
-                          ? Colors.blue.shade50
-                          : Colors.green.shade50,
+                      color: _typeColors(context).background,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -494,9 +503,7 @@ class _SessionCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: session.type == CourseType.te
-                            ? Colors.blue.shade700
-                            : Colors.green.shade700,
+                        color: _typeColors(context).foreground,
                       ),
                     ),
                   ),
@@ -590,6 +597,11 @@ class _SessionDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final typeColors = statusColors(
+      context,
+      session.type == CourseType.te ? Colors.blue : Colors.green,
+      StatusTone.subtle,
+    );
 
     return SafeArea(
       child: Padding(
@@ -614,18 +626,14 @@ class _SessionDetailSheet extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: session.type == CourseType.te
-                    ? Colors.blue.shade50
-                    : Colors.green.shade50,
+                color: typeColors.background,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 session.typeLabel,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: session.type == CourseType.te
-                      ? Colors.blue.shade700
-                      : Colors.green.shade700,
+                  color: typeColors.foreground,
                 ),
               ),
             ),
@@ -740,19 +748,19 @@ class _PenggantiBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final (color, icon, label) = switch (note.kind) {
+    final (colors, icon, label) = switch (note.kind) {
       PenggantiKind.replace => (
-        Colors.orange.shade50,
+        statusColors(context, Colors.orange, StatusTone.subtle),
         Icons.swap_horiz,
         'JADWAL PENGGANTI',
       ),
       PenggantiKind.add => (
-        Colors.blue.shade50,
+        statusColors(context, Colors.blue, StatusTone.subtle),
         Icons.add_circle_outline,
         'PENGGANTI TAMBAHAN',
       ),
       PenggantiKind.info => (
-        Colors.grey.shade100,
+        statusColors(context, Colors.grey, StatusTone.subtle),
         Icons.info_outline,
         'INFO PENGGANTI',
       ),
@@ -763,13 +771,13 @@ class _PenggantiBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color,
+        color: colors.background,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: colorScheme.onSurface),
+          Icon(icon, size: 18, color: colors.foreground),
           const SizedBox(width: 8),
           Expanded(
             child: Column(

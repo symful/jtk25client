@@ -4,12 +4,14 @@ library;
 import 'package:flutter/material.dart';
 
 import '../models/room.dart';
+import '../theme/theme.dart';
 
 /// Badge showing whether a session is delivered online or in person.
 ///
 /// Shows "Online" with a wifi icon for remote sessions and "Offline" with a
-/// school icon otherwise. Use [ModeBadge.visible] to render nothing for the
-/// common offline case and avoid a badge on every single card.
+/// school icon otherwise. Colours come from [statusColors] so the badge stays
+/// legible in both themes — a fixed `shade700`-on-`shade50` pair is unreadable
+/// in dark mode.
 class ModeBadge extends StatelessWidget {
   const ModeBadge({super.key, required this.isOnline}) : _onlyOnline = false;
 
@@ -23,10 +25,17 @@ class ModeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (_onlyOnline && !isOnline) return const SizedBox.shrink();
 
+    final scheme = Theme.of(context).colorScheme;
+    final colors = statusColors(
+      context,
+      isOnline ? Colors.blue : Colors.grey,
+      StatusTone.subtle,
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isOnline ? Colors.blue.shade50 : Colors.grey.shade100,
+        color: colors.background,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -35,7 +44,7 @@ class ModeBadge extends StatelessWidget {
           Icon(
             isOnline ? Icons.wifi : Icons.school,
             size: 12,
-            color: isOnline ? Colors.blue.shade700 : Colors.grey.shade600,
+            color: isOnline ? colors.foreground : scheme.onSurfaceVariant,
           ),
           const SizedBox(width: 3),
           Text(
@@ -43,7 +52,7 @@ class ModeBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: isOnline ? Colors.blue.shade700 : Colors.grey.shade600,
+              color: isOnline ? colors.foreground : scheme.onSurfaceVariant,
             ),
           ),
         ],

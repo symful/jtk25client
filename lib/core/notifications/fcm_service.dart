@@ -36,13 +36,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final type = message.data['type'] as String?;
   if (type == null || type.isEmpty) return;
 
+  // Mirrors the notification types the server actually sends (fcm.ts).
   const updatableTypes = {
     'schedule_update',
     'calendar_update',
     'pengganti_update',
-    'announcement_update',
-    'dosen_update',
-    'room_update',
   };
   if (!updatableTypes.contains(type)) return;
 

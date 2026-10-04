@@ -328,6 +328,11 @@ class _NotificationPermissionScreenState
   }
 
   Widget _buildGranted(ThemeData theme) {
+    // Success green needs a light-shade in dark mode to stay readable.
+    final success = theme.brightness == Brightness.dark
+        ? Colors.green.shade300
+        : Colors.green.shade700;
+
     return Column(
       children: [
         const SizedBox(height: 32),
@@ -336,13 +341,13 @@ class _NotificationPermissionScreenState
           width: 120,
           height: 120,
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.1),
+            color: success.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
+          child: Icon(
             Icons.check_circle_rounded,
             size: 64,
-            color: Colors.green,
+            color: success,
           ),
         ),
         const SizedBox(height: 24),
@@ -350,7 +355,7 @@ class _NotificationPermissionScreenState
           'Pemberitahuan Aktif',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.green,
+            color: success,
           ),
           textAlign: TextAlign.center,
         ),

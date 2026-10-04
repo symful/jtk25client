@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/jtk_api.dart';
 import '../cache/offline_cache.dart';
 import '../models/announcement.dart';
-import '../models/dosen.dart';
 import '../models/calendar.dart';
 import '../models/meta.dart';
 import '../models/pengganti.dart';
@@ -195,30 +194,6 @@ final calendarProvider = FutureProvider<List<JtkCalendar>>((ref) async {
     final cached = cache.loadJson(CacheKey.calendar);
     if (cached is Map<String, dynamic>) {
       return JtkCalendar.listFromJson(cached['data']);
-    }
-    rethrow;
-  }
-});
-
-/// Dosen (lecturers) provider.
-final dosenProvider = FutureProvider<List<Dosen>>((ref) async {
-  final api = ref.watch(apiClientProvider);
-  try {
-    final items = await api.dosen();
-    try {
-      final cache = ref.read(offlineCacheProvider);
-      await cache.save(CacheKey.dosen, {
-        'data': items.map((d) => d.toJson()).toList(),
-      });
-    } catch (_) {
-      // Cache write failed; network data is still valid.
-    }
-    return items;
-  } on Object catch (_) {
-    final cache = ref.read(offlineCacheProvider);
-    final cached = cache.loadJson(CacheKey.dosen);
-    if (cached is Map<String, dynamic>) {
-      return Dosen.listFromJson(cached['data']);
     }
     rethrow;
   }

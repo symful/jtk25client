@@ -43,7 +43,6 @@ enum CacheKey {
   pengganti('jtk_pengganti'),
   announcements('jtk_announcements'),
   calendar('jtk_calendar'),
-  dosen('jtk_dosen'),
   rooms('jtk_rooms');
 
   const CacheKey(this.boxKey);

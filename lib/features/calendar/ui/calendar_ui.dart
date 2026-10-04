@@ -17,6 +17,7 @@ import '../../../core/models/calendar.dart';
 import '../../../core/models/pengganti.dart';
 import '../../../core/providers/providers.dart';
 import '../../../core/ui/refresh_helpers.dart';
+import '../../../core/theme/theme.dart';
 import '../../../core/utils/wib_now.dart';
 import '../../schedule/providers/schedule_providers.dart';
 import '../../settings/data/settings_data.dart';
@@ -469,7 +470,7 @@ class _ListCalendarEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = _categoryAccentColor(event.category);
+    final accent = _categoryAccentColor(context, event.category);
     final startDate = DateTime.tryParse(event.date);
     final dateStr = startDate != null
         ? DateFormat('dd MMMM yyyy', 'id').format(startDate)
@@ -896,8 +897,8 @@ class _CalendarGrid extends StatelessWidget {
                                   margin: const EdgeInsets.symmetric(
                                     horizontal: 1,
                                   ),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.orange,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -950,7 +951,7 @@ class _GridEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = _categoryAccentColor(event.category);
+    final accent = _categoryAccentColor(context, event.category);
     final dateStr = _formatDateRange(event.date, event.endDate);
 
     return Card(
@@ -1059,18 +1060,22 @@ class _PenggantiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final (color, icon, kindLabel) = switch (entry.kind) {
+    final (colors, icon, kindLabel) = switch (entry.kind) {
       PenggantiKind.replace => (
-        Colors.orange.shade50,
+        statusColors(context, Colors.orange, StatusTone.subtle),
         Icons.swap_horiz,
         'Ganti',
       ),
       PenggantiKind.add => (
-        Colors.blue.shade50,
+        statusColors(context, Colors.blue, StatusTone.subtle),
         Icons.add_circle_outline,
         'Tambah',
       ),
-      PenggantiKind.info => (Colors.grey.shade100, Icons.info_outline, 'Info'),
+      PenggantiKind.info => (
+        statusColors(context, Colors.grey, StatusTone.subtle),
+        Icons.info_outline,
+        'Info',
+      ),
     };
 
     return Card(
@@ -1080,11 +1085,7 @@ class _PenggantiCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border(
             left: BorderSide(
-              color: switch (entry.kind) {
-                PenggantiKind.replace => Colors.orange,
-                PenggantiKind.add => Colors.blue,
-                PenggantiKind.info => Colors.grey,
-              },
+              color: colors.foreground,
               width: 4,
             ),
           ),
@@ -1104,7 +1105,7 @@ class _PenggantiCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: color,
+                      color: colors.background,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -1112,11 +1113,7 @@ class _PenggantiCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: switch (entry.kind) {
-                          PenggantiKind.replace => Colors.orange.shade800,
-                          PenggantiKind.add => Colors.blue.shade800,
-                          PenggantiKind.info => Colors.grey.shade700,
-                        },
+                        color: colors.foreground,
                       ),
                     ),
                   ),
@@ -1278,20 +1275,29 @@ DateTime? _itemDate(CalendarListItem item) {
   };
 }
 
+/// Base hues used to give each event category a stable accent.
+const List<MaterialColor> _categoryPalette = [
+  Colors.blue,
+  Colors.green,
+  Colors.purple,
+  Colors.cyan,
+  Colors.orange,
+  Colors.red,
+  Colors.indigo,
+  Colors.teal,
+];
+
 /// Deterministic accent color for an event category.
-Color _categoryAccentColor(String? category) {
-  if (category == null) return const Color(0xFF78909C); // blue grey 400
-  const palette = [
-    Color(0xFF1565C0), // blue 800
-    Color(0xFF2E7D32), // green 800
-    Color(0xFF7B1FA2), // purple 700
-    Color(0xFF00838F), // cyan 800
-    Color(0xFFE65100), // orange 900
-    Color(0xFFC62828), // red 800
-    Color(0xFF283593), // indigo 800
-    Color(0xFF558B2F), // light green 800
-  ];
-  return palette[category.hashCode.abs() % palette.length];
+///
+/// The palette entries are Material base colors, resolved per theme: the light
+/// scheme uses the 800 shade, dark mode the 200 shade so the accent stays
+/// visible against the surface it sits on.
+Color _categoryAccentColor(BuildContext context, String? category) {
+  final scheme = Theme.of(context);
+  if (category == null) return scheme.colorScheme.outline;
+
+  final base = _categoryPalette[category.hashCode.abs() % _categoryPalette.length];
+  return scheme.brightness == Brightness.dark ? base.shade200 : base.shade800;
 }
 
 /// Build month groups without class filtering (for 'Semua' mode).

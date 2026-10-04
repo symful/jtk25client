@@ -4,7 +4,6 @@
 library;
 
 export 'announcement.dart';
-export 'dosen.dart';
 export 'calendar.dart';
 export 'meta.dart';
 export 'pengganti.dart';

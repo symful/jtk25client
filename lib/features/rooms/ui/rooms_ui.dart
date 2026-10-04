@@ -13,6 +13,7 @@ import '../../../core/cache/offline_cache.dart';
 import '../../../core/models/room.dart';
 import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/theme/theme.dart';
 import '../../../core/ui/mode_badge.dart';
 import '../../../core/ui/refresh_helpers.dart';
 import '../data/rooms_data.dart';
@@ -221,12 +222,14 @@ class _RoomDayList extends ConsumerWidget {
       child: filtered.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                SizedBox(height: 100),
+              children: [
+                const SizedBox(height: 100),
                 Center(
                   child: Text(
                     'Tidak ada ruangan ditemukan',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -314,19 +317,22 @@ class _RoomListTile extends ConsumerWidget {
 
     // Online rooms are virtual, so they have no occupied/free state.
     final isOnline = room.type == RoomType.online;
+    final state = statusColors(
+      context,
+      isOnline
+          ? Colors.blue
+          : (occupied ? Colors.red : Colors.green),
+      StatusTone.subtle,
+    );
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: isOnline
-            ? Colors.blue.shade50
-            : (occupied ? Colors.red.shade50 : Colors.green.shade50),
+        backgroundColor: state.background,
         child: Icon(
           isOnline
               ? Icons.cloud_outlined
               : (occupied ? Icons.close : Icons.check),
-          color: isOnline
-              ? Colors.blue.shade700
-              : (occupied ? Colors.red.shade700 : Colors.green.shade700),
+          color: state.foreground,
           size: 20,
         ),
       ),
@@ -413,12 +419,14 @@ class RoomDetailPage extends ConsumerWidget {
           const SizedBox(height: 16),
           // Schedule by day.
           if (sessions.isEmpty)
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Text(
                   'Tidak ada jadwal di ruangan ini',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             )
@@ -451,10 +459,18 @@ class _RoomSessionCard extends StatelessWidget {
 
   final RoomSession roomSession;
 
+  /// Badge colours for the TE/PR chip, resolved for the current theme.
+  StatusColors typeColorsOf(BuildContext context) => statusColors(
+    context,
+    roomSession.session.type == CourseType.te ? Colors.blue : Colors.green,
+    StatusTone.subtle,
+  );
+
   @override
   Widget build(BuildContext context) {
     final session = roomSession.session;
     final colorScheme = Theme.of(context).colorScheme;
+    final typeColors = typeColorsOf(context);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -479,9 +495,7 @@ class _RoomSessionCard extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: session.type == CourseType.te
-                        ? Colors.blue.shade50
-                        : Colors.green.shade50,
+                    color: typeColors.background,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -489,9 +503,7 @@ class _RoomSessionCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: session.type == CourseType.te
-                          ? Colors.blue.shade700
-                          : Colors.green.shade700,
+                      color: typeColors.foreground,
                     ),
                   ),
                 ),
@@ -637,12 +649,15 @@ class _MatrixList extends ConsumerWidget {
         : rooms;
 
     if (showAvailableOnly && displayRooms.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
             'Semua ruangan sedang terpakai',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 16,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -836,16 +851,16 @@ class _MatrixCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final occupied = occupancies.isNotEmpty;
-    final Color bgColor = isPengganti
-        ? (isHighlighted ? Colors.amber.shade200 : Colors.amber.shade50)
+    final base = isPengganti
+        ? Colors.amber
         : occupied
-        ? (isHighlighted ? Colors.red.shade200 : Colors.red.shade50)
-        : (isHighlighted ? Colors.green.shade200 : Colors.green.shade50);
-    final Color borderColor = isPengganti
-        ? Colors.amber.shade300
-        : occupied
-        ? Colors.red.shade300
-        : Colors.green.shade300;
+        ? Colors.red
+        : Colors.green;
+    // Highlighted cells use a stronger tone so "now" reads at a glance in
+    // either theme; the subtle tone is the resting state.
+    final tone = isHighlighted ? StatusTone.strong : StatusTone.subtle;
+    final colors = statusColors(context, base, tone);
+    final borderColor = colors.foreground;
 
     return GestureDetector(
       onTap: occupied ? () => _showOccupancyDetail(context) : null,
@@ -854,7 +869,7 @@ class _MatrixCell extends StatelessWidget {
         height: cellHeight,
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: colors.background,
           border: Border.all(color: borderColor, width: 0.5),
           borderRadius: BorderRadius.circular(2),
         ),
@@ -865,7 +880,7 @@ class _MatrixCell extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isPengganti ? Colors.amber.shade700 : Colors.red,
+                    color: colors.foreground,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -956,26 +971,31 @@ class _MatrixLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Legend swatches mirror the matrix cell tones for the current theme.
+    final free = statusColors(context, Colors.green, StatusTone.subtle);
+    final busy = statusColors(context, Colors.red, StatusTone.subtle);
+    final ganti = statusColors(context, Colors.amber, StatusTone.subtle);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _LegendItem(
-            color: Colors.green.shade100,
-            border: Colors.green.shade300,
+            color: free.background,
+            border: free.foreground,
             label: 'Kosong',
           ),
           const SizedBox(width: 16),
           _LegendItem(
-            color: Colors.red.shade100,
-            border: Colors.red.shade300,
+            color: busy.background,
+            border: busy.foreground,
             label: 'Terpakai',
           ),
           const SizedBox(width: 16),
           _LegendItem(
-            color: Colors.amber.shade100,
-            border: Colors.amber.shade300,
+            color: ganti.background,
+            border: ganti.foreground,
             label: 'Pengganti',
           ),
         ],

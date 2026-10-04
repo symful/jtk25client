@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/pengganti.dart';
+import '../../../core/theme/theme.dart';
 import '../../../core/ui/mode_badge.dart';
 import '../../schedule/providers/schedule_providers.dart';
 import '../providers/pengganti_providers.dart';
@@ -25,10 +26,13 @@ class PenggantiPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Jadwal Pengganti')),
       body: entries.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Tidak ada jadwal pengganti',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             )
           : ListView.separated(
@@ -57,18 +61,22 @@ class _PenggantiTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final (color, icon, kindLabel) = switch (entry.kind) {
+    final (colors, icon, kindLabel) = switch (entry.kind) {
       PenggantiKind.replace => (
-        Colors.orange.shade50,
+        statusColors(context, Colors.orange, StatusTone.subtle),
         Icons.swap_horiz,
         'Ganti',
       ),
       PenggantiKind.add => (
-        Colors.blue.shade50,
+        statusColors(context, Colors.blue, StatusTone.subtle),
         Icons.add_circle_outline,
         'Tambah',
       ),
-      PenggantiKind.info => (Colors.grey.shade100, Icons.info_outline, 'Info'),
+      PenggantiKind.info => (
+        statusColors(context, Colors.grey, StatusTone.subtle),
+        Icons.info_outline,
+        'Info',
+      ),
     };
 
     return Card(
@@ -78,7 +86,7 @@ class _PenggantiTile extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: color,
+            color: colors.background,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: colorScheme.onSurface, size: 20),
@@ -170,20 +178,28 @@ class _PenggantiDetailSheet extends StatelessWidget {
               ),
             ),
             // Kind badge.
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: switch (entry.kind) {
-                  PenggantiKind.replace => Colors.orange.shade50,
-                  PenggantiKind.add => Colors.blue.shade50,
-                  PenggantiKind.info => Colors.grey.shade100,
-                },
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                _kindLabel(entry.kind),
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+            Builder(
+              builder: (context) {
+                final kind = statusColors(
+                  context,
+                  _kindBaseColor(entry.kind),
+                  StatusTone.subtle,
+                );
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: kind.background,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _kindLabel(entry.kind),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: kind.foreground,
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             // Date.
@@ -236,6 +252,13 @@ class _PenggantiDetailSheet extends StatelessWidget {
     PenggantiKind.replace => 'Ganti Jadwal',
     PenggantiKind.add => 'Tambah Jadwal',
     PenggantiKind.info => 'Info',
+  };
+
+  /// Base hue for a pengganti kind, used with [statusColors].
+  Color _kindBaseColor(PenggantiKind kind) => switch (kind) {
+    PenggantiKind.replace => Colors.orange,
+    PenggantiKind.add => Colors.blue,
+    PenggantiKind.info => Colors.grey,
   };
 }
 
