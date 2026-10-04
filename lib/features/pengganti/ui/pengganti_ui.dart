@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/pengganti.dart';
+import '../../../core/ui/mode_badge.dart';
 import '../../schedule/providers/schedule_providers.dart';
 import '../providers/pengganti_providers.dart';
 
@@ -100,7 +101,7 @@ class _PenggantiTile extends StatelessWidget {
                 runSpacing: 2,
                 children: entry.sessions
                     .where((s) => s.mode != null)
-                    .map((s) => _ModeBadge(mode: s.mode))
+                    .map((s) => ModeBadge(isOnline: s.isOnline))
                     .toList(),
               ),
             ],
@@ -216,9 +217,9 @@ class _PenggantiDetailSheet extends StatelessWidget {
                   subtitle: Row(
                     children: [
                       Expanded(
-                        child: Text('${s.time} · ${s.room} · ${s.lecturer}'),
+                        child: Text('${s.time} · ${s.roomLabel()} · ${s.lecturer}'),
                       ),
-                      _ModeBadge(mode: s.mode),
+                      ModeBadge(isOnline: s.isOnline),
                     ],
                   ),
                 ),
@@ -241,42 +242,3 @@ class _PenggantiDetailSheet extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Mode badge (offline / online)
 // ---------------------------------------------------------------------------
-
-class _ModeBadge extends StatelessWidget {
-  const _ModeBadge({required this.mode});
-
-  final String? mode;
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveMode = mode ?? 'offline';
-    final isOnline = effectiveMode == 'online';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: isOnline ? Colors.blue.shade50 : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isOnline ? Icons.wifi : Icons.school,
-            size: 12,
-            color: isOnline ? Colors.blue.shade700 : Colors.grey.shade600,
-          ),
-          const SizedBox(width: 3),
-          Text(
-            isOnline ? 'Online' : 'Offline',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: isOnline ? Colors.blue.shade700 : Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

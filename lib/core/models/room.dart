@@ -4,12 +4,17 @@ library;
 /// Room type.
 enum RoomType {
   kelas,
-  lab;
+  lab,
+  online;
 
   String get label => switch (this) {
     RoomType.kelas => 'kelas',
     RoomType.lab => 'lab',
+    RoomType.online => 'online',
   };
+
+  /// Whether this room is a real, physically bookable space.
+  bool get isPhysical => this != RoomType.online;
 
   static RoomType? fromJson(String value) {
     for (final t in values) {

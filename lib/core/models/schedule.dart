@@ -84,6 +84,16 @@ class Session {
   /// Offline/online mode. Null defaults to 'offline'.
   final String? mode;
 
+  /// Whether this session is delivered online rather than in [room].
+  bool get isOnline => mode == 'online';
+
+  /// Human-readable location for this session.
+  ///
+  /// Online sessions show the raw room id only in rooms screens; everywhere
+  /// else reads better as plain "Online".
+  String roomLabel({bool raw = false}) =>
+      (isOnline && !raw) ? 'Online' : room;
+
   /// Split multi-lecturer code string into individual trimmed codes.
   List<String> get lecturerCodes => lecturerCode
       .split(',')

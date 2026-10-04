@@ -90,12 +90,16 @@ typedef OccupancyMatrix =
 /// Scans every session in every class and maps it to the canonical time
 /// slots it overlaps with. A session spanning "07.00-12.20" will occupy
 /// all morning slots (07.00-07.50 through 11.30-12.20).
+///
+/// Online sessions are skipped: they hold no physical room, so counting
+/// them would mark a real classroom as busy while nobody is in it.
 OccupancyMatrix buildOccupancyMatrix(List<ScheduleClass> classes) {
   final matrix = <String, Map<Day, Map<int, List<SessionOccupancy>>>>{};
 
   for (final cls in classes) {
     for (final daySchedule in cls.schedule) {
       for (final session in daySchedule.sessions) {
+        if (session.isOnline) continue;
         final roomId = session.room;
         final day = daySchedule.day;
         final slotIndices = _findOverlappingSlots(session.time);
@@ -228,13 +232,19 @@ bool isAvailableNow(
 }
 
 /// Count how many rooms are available right now.
+///
+/// Online rooms are not bookable spaces, so they are never counted.
 int countAvailableRooms(
   OccupancyMatrix matrix, {
   required List<Room> rooms,
   required DateTime now,
 }) {
   return rooms
-      .where((r) => isAvailableNow(matrix, roomId: r.extId, now: now))
+      .where(
+        (r) =>
+            (r.type?.isPhysical ?? true) &&
+            isAvailableNow(matrix, roomId: r.extId, now: now),
+      )
       .length;
 }
 
@@ -316,6 +326,7 @@ OccupancyMatrix applyPenggantiToDate(
         }
 
         for (final session in pengganti.sessions) {
+          if (session.isOnline) continue;
           final room = session.room;
           final slotIndices = _findOverlappingSlots(session.time);
           result.putIfAbsent(room, () => {});
@@ -337,6 +348,7 @@ OccupancyMatrix applyPenggantiToDate(
 
       case PenggantiKind.add:
         for (final session in pengganti.sessions) {
+          if (session.isOnline) continue;
           final room = session.room;
           final slotIndices = _findOverlappingSlots(session.time);
           result.putIfAbsent(room, () => {});
@@ -397,6 +409,7 @@ Set<(String, Day, int)> computePenggantiCells(List<PenggantiEntry> entries) {
     for (final entry in dayEntries) {
       if (entry.kind == PenggantiKind.info) continue;
       for (final session in entry.sessions) {
+        if (session.isOnline) continue;
         final slotIndices = _findOverlappingSlots(session.time);
         for (final si in slotIndices) {
           cells.add((session.room, day, si));

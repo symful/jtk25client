@@ -322,7 +322,7 @@ class _DosenSessionCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 2),
                 Text(
-                  session.room,
+                  session.roomLabel(),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),

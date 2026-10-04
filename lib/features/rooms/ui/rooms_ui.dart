@@ -13,6 +13,7 @@ import '../../../core/cache/offline_cache.dart';
 import '../../../core/models/room.dart';
 import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/ui/mode_badge.dart';
 import '../../../core/ui/refresh_helpers.dart';
 import '../data/rooms_data.dart';
 import '../providers/rooms_providers.dart';
@@ -309,14 +310,23 @@ class _RoomListTile extends ConsumerWidget {
     final subtitle = occupancies.isNotEmpty
         ? '${occupancies.first.courseCode} · ${occupancies.first.sessionTime}'
               '${occupancies.length > 1 ? ' +${occupancies.length - 1} lagi' : ''}'
-        : (room.type == RoomType.lab ? 'Laboratorium' : 'Ruang Kelas');
+        : roomTypeLabel(room.type);
+
+    // Online rooms are virtual, so they have no occupied/free state.
+    final isOnline = room.type == RoomType.online;
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: occupied ? Colors.red.shade50 : Colors.green.shade50,
+        backgroundColor: isOnline
+            ? Colors.blue.shade50
+            : (occupied ? Colors.red.shade50 : Colors.green.shade50),
         child: Icon(
-          occupied ? Icons.close : Icons.check,
-          color: occupied ? Colors.red.shade700 : Colors.green.shade700,
+          isOnline
+              ? Icons.cloud_outlined
+              : (occupied ? Icons.close : Icons.check),
+          color: isOnline
+              ? Colors.blue.shade700
+              : (occupied ? Colors.red.shade700 : Colors.green.shade700),
           size: 20,
         ),
       ),
@@ -371,9 +381,7 @@ class RoomDetailPage extends ConsumerWidget {
               child: Row(
                 children: [
                   Icon(
-                    room.type == RoomType.lab
-                        ? Icons.computer
-                        : Icons.meeting_room,
+                    roomTypeIcon(room.type),
                     size: 32,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -387,9 +395,7 @@ class RoomDetailPage extends ConsumerWidget {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         Text(
-                          room.type == RoomType.lab
-                              ? 'Laboratorium'
-                              : 'Ruang Kelas',
+                          roomTypeLabel(room.type),
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: Theme.of(
@@ -618,10 +624,15 @@ class _MatrixList extends ConsumerWidget {
     final highlightSlot = showAvailableOnly ? currentSlotIndex(now) : null;
     final penggantiCells = ref.watch(penggantiCellsProvider);
 
-    // Filter rooms if "Tersedia sekarang" is active.
+    // Filter rooms if "Tersedia sekarang" is active. Online rooms are never
+    // shown as bookable, so they are excluded from this filter entirely.
     final displayRooms = showAvailableOnly
         ? rooms
-              .where((r) => isAvailableNow(matrix, roomId: r.extId, now: now))
+              .where(
+                (r) =>
+                    (r.type?.isPhysical ?? true) &&
+                    isAvailableNow(matrix, roomId: r.extId, now: now),
+              )
               .toList()
         : rooms;
 
@@ -698,7 +709,7 @@ class _RoomMatrix extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                room.type == RoomType.lab ? Icons.computer : Icons.meeting_room,
+                roomTypeIcon(room.type),
                 size: 18,
                 color: Theme.of(context).colorScheme.primary,
               ),

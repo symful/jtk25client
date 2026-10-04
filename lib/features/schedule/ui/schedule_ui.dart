@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/pengganti.dart';
 import '../../../core/models/schedule.dart';
 import '../../../core/providers/providers.dart';
+import '../../../core/ui/mode_badge.dart';
 import '../../../core/ui/refresh_helpers.dart';
 import '../../../core/utils/time_slot.dart';
 import '../../settings/data/settings_data.dart';
@@ -499,6 +500,11 @@ class _SessionCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Online badge (only rendered for remote sessions).
+                  if (session.isOnline) ...[
+                    const SizedBox(width: 6),
+                    ModeBadge(isOnline: true),
+                  ],
                 ],
               ),
               const SizedBox(height: 4),
@@ -521,14 +527,14 @@ class _SessionCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    Icons.location_on_outlined,
+                    session.isOnline ? Icons.cloud_outlined : Icons.location_on_outlined,
                     size: 14,
                     color: colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 2),
                   Expanded(
                     child: Text(
-                      session.room,
+                      session.roomLabel(),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -645,11 +651,22 @@ class _SessionDetailSheet extends StatelessWidget {
             const SizedBox(height: 8),
             // Room.
             _DetailRow(
-              icon: Icons.location_on_outlined,
+              icon: session.isOnline
+                  ? Icons.cloud_outlined
+                  : Icons.location_on_outlined,
               label: 'Ruang',
-              value: session.room,
+              value: session.roomLabel(),
             ),
             const SizedBox(height: 8),
+            if (session.isOnline) ...[
+              // Delivery mode, only meaningful for remote sessions.
+              _DetailRow(
+                icon: Icons.wifi,
+                label: 'Mode',
+                value: 'Online',
+              ),
+              const SizedBox(height: 8),
+            ],
             // Lecturer(s).
             _DetailRow(
               icon: Icons.person_outline,

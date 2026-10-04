@@ -167,7 +167,7 @@ class NotificationService {
             id: alarmId++,
             title: 'Kelas segera dimulai',
             body:
-                '${firstSession.courseName} (${firstSession.type.label}) — ${slot.start} di ${firstSession.room}',
+                '${firstSession.courseName} (${firstSession.type.label}) — ${slot.start} ${_locationOf(firstSession)}',
             scheduledTime: scheduledTime,
           );
         }
@@ -192,6 +192,12 @@ class NotificationService {
     blocks.add(current);
     return blocks;
   }
+
+  /// Location phrase for a reminder body.
+  ///
+  /// Online sessions read "online" instead of leaking a virtual room id.
+  static String _locationOf(Session session) =>
+      session.isOnline ? 'online' : 'di ${session.room}';
 
   Future<void> _scheduleReminder({
     required int id,
@@ -317,7 +323,7 @@ class NotificationService {
             id: alarmId++,
             title: 'Kelas pengganti segera',
             body:
-                '${session.courseName} (${session.type.label}) — ${slot.start} di ${session.room}',
+                '${session.courseName} (${session.type.label}) — ${slot.start} ${_locationOf(session)}',
             scheduledTime: scheduledTime,
           );
         }

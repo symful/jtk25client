@@ -24,6 +24,7 @@ Session _makeSession({
   CourseType type = CourseType.te,
   String lecturerCode = 'XX',
   String lecturer = 'Test Dosen',
+  String? mode,
 }) {
   return Session(
     time: time,
@@ -33,6 +34,7 @@ Session _makeSession({
     lecturerCode: lecturerCode,
     lecturer: lecturer,
     room: room,
+    mode: mode,
   );
 }
 
@@ -634,6 +636,121 @@ void main() {
         countAvailableRooms(matrix, rooms: rooms, now: now),
         1,
       ); // D112 only
+    });
+
+    test('excludes online rooms from the count', () {
+      final classes = [
+        _makeClass(
+          className: 'D3-2A',
+          day: Day.senin,
+          sessions: [
+            _makeSession(
+              time: '07.00-07.50',
+              room: 'D108-Kelas',
+              courseCode: 'A',
+            ),
+          ],
+        ),
+      ];
+      final matrix = buildOccupancyMatrix(classes);
+
+      final rooms = [
+        Room(id: 'D108-Kelas', name: 'D108', type: RoomType.kelas),
+        Room(id: 'D112-Kelas', name: 'D112', type: RoomType.kelas),
+        Room(
+          id: 'Online-Google Meet',
+          name: 'Online (Google Meet)',
+          type: RoomType.online,
+        ),
+      ];
+
+      // WIB 07.10 = UTC 00:10, Monday, slot 0. D108 is busy, D112 is free,
+      // and the online room must not be counted at all.
+      final now = DateTime.utc(2026, 9, 14, 0, 10);
+      expect(countAvailableRooms(matrix, rooms: rooms, now: now), 1);
+    });
+  });
+
+  group('online sessions', () {
+    test('are excluded from the occupancy matrix', () {
+      final classes = [
+        _makeClass(
+          className: 'D4-2B',
+          day: Day.senin,
+          sessions: [
+            _makeSession(
+              time: '07.00-07.50',
+              room: 'Online-Google Meet',
+              courseCode: '25TI2101',
+              mode: 'online',
+            ),
+          ],
+        ),
+      ];
+
+      final matrix = buildOccupancyMatrix(classes);
+
+      expect(matrix.containsKey('Online-Google Meet'), isFalse);
+      for (var i = 0; i < kCanonicalSlots.length; i++) {
+        expect(
+          isOccupied(
+            matrix,
+            roomId: 'Online-Google Meet',
+            day: Day.senin,
+            slotIndex: i,
+          ),
+          isFalse,
+        );
+      }
+    });
+
+    test('do not block a physical room in the same slot', () {
+      final classes = [
+        _makeClass(
+          className: 'D4-2B',
+          day: Day.senin,
+          sessions: [
+            _makeSession(
+              time: '07.00-07.50',
+              room: 'Online-Google Meet',
+              courseCode: '25TI2101',
+              mode: 'online',
+            ),
+          ],
+        ),
+      ];
+
+      final matrix = buildOccupancyMatrix(classes);
+
+      expect(
+        isAvailableNow(
+          matrix,
+          roomId: 'D112-Kelas',
+          now: DateTime.utc(2026, 9, 14, 0, 10),
+        ),
+        isTrue,
+      );
+    });
+
+    test('are still listed as sessions in their own room detail', () {
+      final classes = [
+        _makeClass(
+          className: 'D4-2B',
+          day: Day.senin,
+          sessions: [
+            _makeSession(
+              time: '15.40-17.20',
+              room: 'Online-Google Meet',
+              courseCode: '25TI2101',
+              mode: 'online',
+            ),
+          ],
+        ),
+      ];
+
+      final sessions = findRoomSessions('Online-Google Meet', classes);
+      expect(sessions, hasLength(1));
+      expect(sessions.first.session.isOnline, isTrue);
     });
   });
 }

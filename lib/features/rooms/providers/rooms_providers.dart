@@ -164,8 +164,9 @@ final availableNowSummaryProvider = Provider<String>((ref) {
     error: (_, _) => 'Gagal memuat',
     data: (rooms) {
       final now = DateTime.now();
+      final physical = rooms.where((r) => r.type?.isPhysical ?? true);
       final count = countAvailableRooms(matrix, rooms: rooms, now: now);
-      return '$count dari ${rooms.length} ruangan kosong sekarang';
+      return '$count dari ${physical.length} ruangan kosong sekarang';
     },
   );
 });
@@ -218,8 +219,10 @@ final dayAvailableCountProvider = Provider<String>((ref) {
     loading: () => 'Memuat...',
     error: (_, _) => 'Gagal memuat',
     data: (rooms) {
+      // Online rooms are not bookable, so they never count as free.
+      final physical = rooms.where((r) => r.type?.isPhysical ?? true);
       var available = 0;
-      for (final room in rooms) {
+      for (final room in physical) {
         if (!isRoomOccupiedOnDay(
           matrix,
           roomId: room.extId,
@@ -228,7 +231,7 @@ final dayAvailableCountProvider = Provider<String>((ref) {
           available++;
         }
       }
-      return '$available dari ${rooms.length} ruangan kosong';
+      return '$available dari ${physical.length} ruangan kosong';
     },
   );
 });

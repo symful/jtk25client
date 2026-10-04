@@ -147,6 +147,12 @@ class MergedSession {
   final String lecturer;
   final String room;
 
+  /// Whether the merged block is delivered online.
+  bool get isOnline => originalSessions.first.isOnline;
+
+  /// Human-readable location for the merged block.
+  String roomLabel() => isOnline ? 'Online' : room;
+
   /// Display time string, e.g. "07.00–12.20".
   final String startTime;
   final String endTime;
