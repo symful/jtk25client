@@ -255,11 +255,14 @@ class _CalendarBody extends ConsumerWidget {
     final dateMap = _buildDateMap(filteredEvents, penggantiEntries);
 
     // Build month groups for the list view.
+    // Both branches use the class-filtered `penggantiEntries`: 'Semua' shows
+    // global-only events with no class-specific pengganti, and a specific
+    // class shows only that class's pengganti.
     final wib = wibNow;
     final monthGroups = classFilter == 'Semua'
         ? _buildMonthGroupsAll(
             events: filteredEvents,
-            penggantiEntries: allPengganti,
+            penggantiEntries: penggantiEntries,
             wibNow: wib,
           )
         : groupByMonth(
@@ -487,7 +490,7 @@ class _ListCalendarEventCard extends StatelessWidget {
               // Left accent bar.
               Container(
                 width: 4,
-                color: isUpcoming ? accent : accent.withOpacity(0.4),
+                color: isUpcoming ? accent : accent.withValues(alpha: 0.4),
               ),
               // Content.
               Expanded(
@@ -1246,7 +1249,7 @@ class _EmptyState extends StatelessWidget {
               size: 64,
               color: Theme.of(
                 context,
-              ).colorScheme.onSurfaceVariant.withOpacity(0.4),
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(

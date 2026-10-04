@@ -104,6 +104,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Tap a class FilterChip by its label.
+  Future<void> selectClass(WidgetTester tester, String classCode) async {
+    final chip = find.byWidgetPredicate(
+      (w) =>
+          w is FilterChip &&
+          w.label is Text &&
+          (w.label as Text).data == classCode,
+    );
+    await tester.tap(chip);
+    await tester.pumpAndSettle();
+  }
+
   /// Tap the SegmentedButton's "Kalender" segment.
   Future<void> tapKalenderSegment(WidgetTester tester) async {
     final segmented = find.byType(SegmentedButton<int>);
@@ -119,7 +131,7 @@ void main() {
     testWidgets('defaults to Daftar (list) view', (tester) async {
       await buildCalendarPage(tester, events: []);
       expect(find.text('Daftar'), findsOneWidget);
-      expect(find.text('Tidak ada acara'), findsOneWidget);
+      expect(find.text('Tidak ada acara yang cocok'), findsOneWidget);
     });
 
     testWidgets('switching to Kalender shows grid view', (tester) async {
@@ -188,7 +200,7 @@ void main() {
       expect(find.text('Event lalu'), findsOneWidget);
       expect(find.text('Selesai'), findsOneWidget);
 
-      // Upcoming = full opacity, past = 0.5 opacity.
+      // Upcoming = full opacity, past = dimmed (0.55).
       final upcomingOpacity = tester.widget<Opacity>(
         find
             .ancestor(
@@ -207,7 +219,7 @@ void main() {
             )
             .first,
       );
-      expect(pastOpacity.opacity, 0.5);
+      expect(pastOpacity.opacity, 0.55);
     });
   });
 
@@ -242,51 +254,53 @@ void main() {
     });
   });
 
-  group('Category filter chips', () {
-    testWidgets('filters events by category', (tester) async {
+  // There is no category filter chip row in the UI — categories render as a
+  // read-only badge on each card. These cover the class filter instead, which
+  // is the filter the calendar actually offers.
+  group('Class filter chips', () {
+    testWidgets("'Semua' shows only global events", (tester) async {
       final events = [
         _makeEvent(
           id: '1',
-          title: 'Kuliah Pagi',
+          title: 'Acara Global',
           date: _wibDateTime(1),
           endDate: _wibDateTime(1),
-          category: 'Akademik',
-        ),
-        _makeEvent(
-          id: '2',
-          title: 'Festival Seni',
-          date: _wibDateTime(2),
-          endDate: _wibDateTime(2),
-          category: 'Seni',
-        ),
-        _makeEvent(
-          id: '3',
-          title: 'Upacara',
-          date: _wibDateTime(3),
-          endDate: _wibDateTime(3),
         ),
       ];
 
       await buildCalendarPage(tester, events: events);
 
       expect(find.text('Semua'), findsOneWidget);
-      expect(find.text('Kuliah Pagi'), findsOneWidget);
-      expect(find.text('Festival Seni'), findsOneWidget);
-      expect(find.text('Upacara'), findsOneWidget);
+      expect(find.text('Acara Global'), findsOneWidget);
+    });
 
-      // Tap "Seni" FilterChip.
-      final seniChip = find.byWidgetPredicate(
-        (w) =>
-            w is FilterChip &&
-            w.label is Text &&
-            (w.label as Text).data == 'Seni',
+    testWidgets('selecting a class shows global plus that class events', (
+      tester,
+    ) async {
+      final global = _makeEvent(
+        id: 'g',
+        title: 'Acara Global',
+        date: _wibDateTime(1),
+        endDate: _wibDateTime(1),
       );
-      await tester.tap(seniChip);
-      await tester.pumpAndSettle();
+      final mine = JtkCalendar(
+        id: 'm',
+        title: 'Acara Kelas',
+        description: null,
+        date: _wibDateTime(2),
+        endDate: _wibDateTime(2),
+        location: null,
+        category: null,
+        className: testClassName,
+      );
 
-      expect(find.text('Festival Seni'), findsOneWidget);
-      expect(find.text('Kuliah Pagi'), findsNothing);
-      expect(find.text('Upacara'), findsNothing);
+      await buildCalendarPage(tester, events: [global, mine]);
+
+      await selectClass(tester, testClassName);
+
+      // Global events stay visible alongside the selected class's events.
+      expect(find.text('Acara Global'), findsOneWidget);
+      expect(find.text('Acara Kelas'), findsOneWidget);
     });
   });
 
@@ -310,6 +324,10 @@ void main() {
       ];
 
       await buildCalendarPage(tester, events: [], pengganti: pengganti);
+
+      // Pengganti are class-specific, so 'Semua' hides them. Select the
+      // class that owns this entry to see it.
+      await selectClass(tester, testClassName);
       expect(find.text('Ganti ruangan'), findsOneWidget);
     });
 
@@ -325,6 +343,7 @@ void main() {
       ];
 
       await buildCalendarPage(tester, events: [], pengganti: pengganti);
+      await selectClass(tester, testClassName);
       expect(find.text('Other class'), findsNothing);
     });
   });

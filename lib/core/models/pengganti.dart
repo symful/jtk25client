@@ -46,7 +46,9 @@ class PenggantiEntry {
 
   factory PenggantiEntry.fromJson(Map<String, dynamic> json) {
     return PenggantiEntry(
-      id: (json['id'] as int).toString(),
+      // D1 ids are integers, but legacy/seeded rows may carry a string id
+      // (e.g. 'pg-001'), so accept both instead of hard-casting to int.
+      id: '${json['id']}',
       classCode: json['class_code'] as String,
       date: json['date'] as String,
       kind: PenggantiKind.fromJson(json['kind'] as String),
